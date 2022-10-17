@@ -2674,6 +2674,10 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * runWorker).
      *
      * ① Worker 类主要是维护线程运行任务时的中断控制状态，以及次要的信息记录。
+     *解释：这里的中断控制状态，是指其继承类 AbstractQueuedSynchronizer
+     *    中的 state 字段，该字段即用作内部加锁，又用做中断控制。
+     *    信息记录则是指任务完成数计数器 completedTasks 字段。
+     *
      * ② 该类通过继承 AbstractQueuedSynchronizer 以简化获取和释放围绕每个任务执行的锁。
      *解释：就是通过覆盖 AbstractQueuedSynchronizer 类的tryAcquire(int unused)和tryRelease(int unused)
      *     方法很容易实现加锁和释放锁。
