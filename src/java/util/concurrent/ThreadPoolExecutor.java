@@ -1194,6 +1194,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
          *
          * 每个Worker的锁状态被初始化为-1，
          * 这里要先将锁状态重置为0，以便可以对Worker正常加锁
+         *
          */
         worker.unlock(); // allow interrupts
 
@@ -1222,18 +1223,41 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                         break;
                     }
                 }
-
                 // 加锁，此处只是简单地将许可证数量从0更新到1
+               /*
+                * 获取互斥锁。
+                * 为什么每一个worker对象在执行任务前都需要获取锁？
+                * 答：这有两个用处：
+                *     1、在别的线程调用shutdown()->interruptIdleWorkers()->
+                           interruptIdleWorkers()的时候不会去中断当前在执行任务的线程。
+                      2、在调用getActiveCount()方法统计当前有多少正在执行任务的线程，是通过
+                            统计多少个线程对象获得锁。(获得锁表明正在执行任务)
+                      3、在调用getTaskCount()方法统计当前有总的有多少任务，是通过
+                           统计多少个线程对象获得锁获正在执行的任务。
+                * 在持有互斥锁时，调用线程池shutdown方法不会中断该线程。
+                * 但是shutdownNow方法无视互斥锁，会中断所有线程。
+                * 2.在运行任何任务之前，获取锁以防止在任务执行期间其他池中断，
+                *   然后确保除非池停止，否则此线程没有设置其中断
+                */
                 worker.lock();
 
                 /*
                  * If pool is stopping, ensure thread is interrupted;
+                 * 如果池正在停止，请确保线程被中断；
                  * if not, ensure thread is not interrupted.
+                 * 如果没有，请确保线程没有中断。
                  * This requires a recheck in second case to deal with shutdownNow race while clearing interrupt
+                 * 这需要在第二种情况下重新检查，以在清除中断时处理shutdownNow争用
                  *
                  * 确保：
                  * 线程池在{-10}状态时，线程未被中断
                  * 线程池在{123}状态时，线程被中断
+                 * 这里if做的事情就是判断是否需要中断当前线程。
+                 * 如果线程池至少处于STOP阶段，当前线程未中断，则中断当前线程；
+                 * 否则清除线程中断位。
+                 *
+                 * if条件中的Thread.interrupted() &&runStateAtLeast(ctl.get(), STOP)
+                 * 做的事情说穿了就是清除中断位并确认目前线程池状态没有达到STOP阶段。
                  */
 
                 // 如果线程池至少已经stop(处于{123}状态)
@@ -1243,7 +1267,6 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                         // 需要为工作线程设置一个中断标记
                         currentThread.interrupt();
                     }
-
                     // 如果线程池处于{-10}状态，则需要清除线程的中断状态
                 } else {
                     // （静态）测试当前线程是否已经中断，线程的中断状态会被清除
@@ -1357,7 +1380,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                 // 或者启用了超时设置，且已经超时
                 || (timed && timedOut)) {
 
-                // 如果线程池中至少有一个Worker
+                // 如果线程池中至少有一个Worker，或者任务队列为空
                 if(workerCount>1
                     // 或者阻塞队列为空
                     || workQueue.isEmpty()) {
@@ -1421,7 +1444,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * corePoolSize workers are running or queue is non-empty but
      * there are no workers.
      *
-     * @param w the worker
+     * @param worker the worker
      * @param completedAbruptly if the worker died due to user exception
      */
     // 线程池中的某个Worker结束，除了需要将该Worker从线程池移除，还要保证阻塞队列中的阻塞任务后续有人处理
@@ -2105,8 +2128,12 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         } else if(delta>0) {
             /*
              * We don't really know how many new threads are "needed".
+             * 我们不知道“需要”多少新线程。
+             *
              * As a heuristic, prestart enough new workers (up to new core size) to handle the current number of tasks in queue,
              * but stop if queue becomes empty while doing so.
+             * 作为一种启发式方法，预先启动足够多的新工作线程（达到新的核心大小）
+             * 来处理队列中的当前任务数，但如果在执行此操作时队列变空，则停止。
              */
             // 限制新增【N】型Worker的数量
             int k = Math.min(delta, workQueue.size());
@@ -2646,10 +2673,35 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * state to a negative value, and clear it upon start (in
      * runWorker).
      *
-     * 类Worker主要维护运行任务的线程的中断控制状态，以及其他次要的簿记。此类机会主义地扩展了AbstractQueuedSynchronizer，
-     * 以简化获取和释放围绕每个任务执行的锁。这可以防止中断，这些中断旨在唤醒等待任务的工作线程，而不是中断正在运行的任务。
-     * 我们实现了一个简单的不可重入互斥锁，而不是使用 ReentrantLock，因为我们不希望工作任务在调用setCorePoolSize等池控制方法时能够重新获取锁。
-     * 此外，为了在线程实际开始运行任务之前禁止中断，我们将锁定状态初始化为负值，并在启动时清除它（在runWorker中）。
+     * ① Worker 类主要是维护线程运行任务时的中断控制状态，以及次要的信息记录。
+     * ② 该类通过继承 AbstractQueuedSynchronizer 以简化获取和释放围绕每个任务执行的锁。
+     *解释：就是通过覆盖 AbstractQueuedSynchronizer 类的tryAcquire(int unused)和tryRelease(int unused)
+     *     方法很容易实现加锁和释放锁。
+     *
+     * ③ 这可以保障中断仅会唤醒等待任务的工作线程，而非中断正在运行的任务。
+     *解释：interruptIdleWorkers 方法需要关心的是加锁逻辑 if (!t.isInterrupted() && w.tryLock())，
+     *     tryLock 方法实际调用的覆写的 tryAcquire 方法，该方法则尝试将 state 值从 0 修改为 1，
+     *     由于 state 值只有在等待任务时才为 0，而线程运行时该值为 1，
+     *     所以只有等待任务的线程才能加锁成功，并执行之后的中断操作。
+     *
+     * ④ 我们实现了一个简单的非可重入互斥锁，而不是使用 ReentrantLock，
+     *   因为我们不希望工作线程在调用诸如 setCorePoolSize 之类的线程池控制方法时能够重新获取该锁。
+     *解释：前半句很好理解，就是需要一个非可重入的互斥锁，而 ReentrantLock 是可重入的互斥锁，所以不用。
+     *   后半句则是说防止 setCorePoolSize 方法再次获取该锁。
+     *   可以看到setCorePoolSize该方法会调用上面说到的 interruptIdleWorkers 方法，
+     *   interruptIdleWorkers 方法会遍历所有的工作线程，尝试加锁成功后执行中断操作，
+     *   如果执行 setCorePoolSize 方法的是线程池中某个工作线程，在锁可重入的情况下，
+     *   该工作线程会在之后的 w.tryLock 成功获取锁，并中断自己。为了避免这种情况，就需要有一个非可重入的互斥锁，
+     *   继承 AbstractQueuedSynchronizer 之后，可以简单快速的实现。
+     *
+     * ⑤ 此外，为了抑制线程真正开始运行之前的中断，我们将锁的状态值初始化为负值，
+     *   并在启动时将其清除（runWorker 方法中）。
+     *解释：工作线程初始化如下，会将状态字段 state 的值设置为 -1，这样上面的 w.tryLock 就无法获取锁，也就不能执行中断。
+     *
+     * 基于上面的分析可知，继承 AbstractQueuedSynchronizer 主要作用如下：
+     *
+     * 1、需要状态值控制中断
+     * 2、支持非可重入的互斥锁
      */
     /*
      * 一个Worker兼具【任务】与【线程】的含义，它将待执行任务firstTask封装为一个线程存储到自身的thread域中以待执行
@@ -2702,6 +2754,15 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
         /** Delegates main run loop to outer runWorker. */
         // （线程开始运行）执行任务
+        /**
+         * 工作线程运行核心逻辑。
+         * 简单来说做的事情就是不断从任务队列中拿取任务运行。
+             Worker 中的这个run()方法调用runWorker(this)方法时，this是包装当前线程对象的worker对象。
+             线程与Worker对象是绑定的，不管这个线程执行哪个任务，在线程runWorker里面都是同一个对象。
+             public void run() {
+                runWorker(this);
+             }
+         */
         public void run() {
             // 执行当前任务
             runWorker(this);
