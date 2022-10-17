@@ -140,6 +140,16 @@ import sun.security.util.SecurityConstants;
  * @since 1.0
  */
 // 线程
+//当中断标志位被设置为true时，线程是否就被中断？ 否
+//具体来说，当对一个线程，调用interrupt()时:
+//
+// 1. 如果线程处于正常活动状态，那么会将该线程的中断标志设置为true. 仅此而已。
+// 被设置中断标志的线程将继续正常运行，不受影响。所以，interrupt() 并不能真正的中断线程，
+// 需要被调用的线程自己进行配合才行。
+//
+// 2. 如果线程处于被阻塞状态(例如处于sleep, wait, join等状态)，
+// 在别的线程中调用当前线程对象的interrupt方法，那么线程将立即退出被阻塞状态，
+// 并抛出一个InterruptedException异常。可以理解为线程被唤醒了。
 public class Thread implements Runnable {
 
     /**
@@ -1241,6 +1251,14 @@ public class Thread implements Runnable {
      * @see #isInterrupted()
      */
     // （静态）测试当前线程是否已经中断，线程的中断状态会被清除
+    //实例方法, interrupt()仅仅是设置线程的中断状态为true,不会停止线程
+    //实例方法，isInterrupt()判断当前线程是否被中断(通过检查中断标志位)
+    //
+    //静态方法，interrupted()判断线程是否被中断，并清除当前中断状态: 1 返回当前线程的中断状态 2 将当前线程的中断状态设为false
+    //
+    //区别：
+    //静态方法interrupted将会清除中断状态 (传入的参数ClearInterrupted为true)
+    //实例方法isInterrupted则不会(传入的参数ClearInterrupted为false)
     public static boolean interrupted() {
         return currentThread().isInterrupted(true);
     }
