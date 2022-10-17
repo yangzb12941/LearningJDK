@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="REMOTE_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="GROUP_NODE:origin" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="09bdf446-3684-4a24-aefa-1909e21a342e" name="Default Changelist" comment="2022-10-17:&#10;1、TimeTask 源码阅读">
+      <change afterPath="$PROJECT_DIR$/源码阅读笔记/TimeTask.md" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="2G3ouGlM12GSsmTtGQofJYC7mPc" />
+  <component name="ProjectViewState">
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="project.structure.last.edited" value="Project" />
+    <property name="project.structure.proportion" value="0.0" />
+    <property name="project.structure.side.proportion" value="0.0" />
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="09bdf446-3684-4a24-aefa-1909e21a342e" name="Default Changelist" comment="" />
+      <created>1665626848421</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1665626848421</updated>
+      <workItem from="1665626851029" duration="88000" />
+      <workItem from="1665640430515" duration="8786000" />
+      <workItem from="1665728498340" duration="7172000" />
+      <workItem from="1665968149589" duration="12447000" />
+      <workItem from="1665990584221" duration="2409000" />
+    </task>
+    <task id="LOCAL-00001" summary="2022-10-17:&#10;1、TimeTask 源码阅读">
+      <created>1665988568536</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1665988568536</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="2" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="2022-10-17:&#10;1、TimeTask 源码阅读" />
+    <option name="LAST_COMMIT_MESSAGE" value="2022-10-17:&#10;1、TimeTask 源码阅读" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="221" y="80" key="IDE.errors.dialog" timestamp="1665990657213">
+      <screen x="0" y="0" width="1280" height="689" />
+    </state>
+    <state x="221" y="80" key="IDE.errors.dialog/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665990657213" />
+    <state x="121" y="0" key="SettingsEditor" timestamp="1665644393873">
+      <screen x="0" y="0" width="1280" height="689" />
+    </state>
+    <state x="121" y="0" key="SettingsEditor/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665644393873" />
+    <state x="233" y="78" key="Vcs.Push.Dialog.v2" timestamp="1665988858502">
+      <screen x="0" y="0" width="1280" height="689" />
+    </state>
+    <state x="233" y="78" key="Vcs.Push.Dialog.v2/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665988858502" />
+    <state x="339" y="77" width="603" height="536" key="find.popup" timestamp="1665973461227">
+      <screen x="0" y="0" width="1280" height="689" />
+    </state>
+    <state x="339" y="77" width="603" height="536" key="find.popup/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665973461227" />
+    <state x="297" y="153" key="run.anything.popup" timestamp="1665796608280">
+      <screen x="0" y="0" width="1280" height="689" />
+    </state>
+    <state x="297" y="153" key="run.anything.popup/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665796608280" />
+    <state x="303" y="10" width="672" height="678" key="search.everywhere.popup" timestamp="1665988912641">
+      <screen x="0" y="0" width="1280" height="689" />
+    </state>
+    <state x="303" y="10" width="672" height="678" key="search.everywhere.popup/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665988912641" />
+  </component>
+</project>
