@@ -57,91 +57,91 @@ import java.security.PrivilegedAction;
  * 使用finalize容易导致OOM，因为如果创建对象的速度很快，那么Finalizer线程的回收速度赶不上创建速度，就会导致内存超载。
  */
 final class Finalizer extends FinalReference<Object> {
-    
+
     /** Lock guarding access to unfinalized list. */
     private static final Object lock = new Object();
-    
+
     // 所有Finalizer共享的引用队列
     private static ReferenceQueue<Object> queue = new ReferenceQueue<>();
-    
+
     /** Head of doubly linked list of Finalizers awaiting finalization. */
     private static Finalizer unfinalized = null;    // 存储所有注册的Finalizer，会不断剔除已报废的引用
-    
+
     private Finalizer next, prev;
-    
-    
+
+
     // 在根线程组启动一个守护线程FinalizerThread
     static {
         // 获取当前线程所在的线程组
         ThreadGroup tg = Thread.currentThread().getThreadGroup();
-        
+
         // 顺着当前线程组往上遍历，找到根线程组system
         ThreadGroup tgn = tg;
         while(tgn != null) {
             tg = tgn;
             tgn = tg.getParent();
         }
-        
+
         // 构造FinalizerThread线程
         Thread finalizer = new FinalizerThread(tg);
-        
+
         // 设置为较高优先级的守护线程
         finalizer.setPriority(Thread.MAX_PRIORITY - 2);
         finalizer.setDaemon(true);
         finalizer.start();
     }
-    
-    
+
+
     // Finalizer内部维护了一个unfinalized链表，每次新建的Finalizer对象都会插入(头插法)到该链表中
     private Finalizer(Object finalizee) {
         super(finalizee, queue);
-        
+
         // push onto unfinalized
         synchronized(lock) {
             if(unfinalized != null) {
                 this.next = unfinalized;
                 unfinalized.prev = this;
             }
-            
+
             unfinalized = this;
         }
     }
-    
-    
+
+
     /* Invoked by VM */
     // 由虚拟机调用，注册Finalizer的过程，就是添加一个新的Finalizer到内部的双向链表
     static void register(Object finalizee) {
         new Finalizer(finalizee);
     }
-    
+
     /** Called by Runtime.runFinalization() */
     // 手动触发Finalizer的清理操作，不用等待FinalizerThread
     static void runFinalization() {
         if(VM.initLevel() == 0) {
             return;
         }
-        
+
         forkSecondaryFinalizer(new Runnable() {
             private volatile boolean running;
-            
+
             public void run() {
                 // in case of recursive call to run()
                 if(running) {
                     return;
                 }
-                
+
                 final JavaLangAccess jla = SharedSecrets.getJavaLangAccess();
-                
+
                 running = true;
-                
+
                 // 遍历所有已报废的Finalizer引用，并执行其清理操作
                 for(Finalizer f; (f = (Finalizer) queue.poll()) != null; ) {
-                    f.runFinalizer(jla);
+                    f.runFinalizer((jdk.internal.access.JavaLangAccess) jla);
                 }
             }
         });
     }
-    
+
     /**
      * Create a privileged secondary finalizer thread in the system thread
      * group for the given Runnable, and wait for it to complete.
@@ -162,21 +162,21 @@ final class Finalizer extends FinalReference<Object> {
                     tg = tgn;
                     tgn = tg.getParent();
                 }
-    
+
                 Thread sft = new Thread(tg, proc, "Secondary finalizer", 0, false);
                 sft.start();
-    
+
                 try {
                     sft.join();
                 } catch(InterruptedException x) {
                     Thread.currentThread().interrupt();
                 }
-    
+
                 return null;
             }
         });
     }
-    
+
     /*
      * 清理操作，通常由FinalizerThread轮询执行，也可以通过runFinalization()手动触发
      *
@@ -188,52 +188,52 @@ final class Finalizer extends FinalReference<Object> {
      * 这样，在下一次GC时，就可以彻底释放掉无关的对象
      */
     private void runFinalizer(JavaLangAccess jla) {
-    
+
         // 首先将待处理的Finalizer从unfinalized中摘下
         synchronized(lock) {
             if(this.next == this) {
                 return; // already finalized
             }
-        
+
             // unlink from unfinalized
             if(unfinalized == this) {
                 unfinalized = this.next;
             } else {
                 this.prev.next = this.next;
             }
-        
+
             if(this.next != null) {
                 this.next.prev = this.prev;
             }
-        
+
             this.prev = null;
             this.next = this;           // mark as finalized
         }
-    
+
         try {
             Object finalizee = this.get();
-        
+
             if(finalizee != null && !(finalizee instanceof java.lang.Enum)) {
                 // 执行该对象的finalize()操作
                 jla.invokeFinalize(finalizee);
-            
+
                 // Clear stack slot containing this variable, to decrease the chances of false retention with a conservative GC
                 finalizee = null;
             }
         } catch(Throwable ignored) {
         }
-    
+
         // 取消对目标对象的追踪，以便下次GC时释放该对象所占内容
         super.clear();
     }
-    
-    
+
+
     // 返回引用队列
     static ReferenceQueue<Object> getQueue() {
         return queue;
     }
-    
-    
+
+
     /*
      * FinalizerThread是JVM内部的守护线程。
      * 这个线程会轮询Finalizer队列中的新增对象。
@@ -242,17 +242,17 @@ final class Finalizer extends FinalReference<Object> {
      */
     private static class FinalizerThread extends Thread {
         private volatile boolean running;
-        
+
         FinalizerThread(ThreadGroup g) {
             super(g, null, "Finalizer", 0, false);
         }
-        
+
         public void run() {
             // in case of recursive call to run()
             if(running) {
                 return; // 避免递归调用
             }
-            
+
             /*
              * Finalizer thread starts before System.initializeSystemClass is called.
              * Wait until JavaLangAccess is available
@@ -266,11 +266,11 @@ final class Finalizer extends FinalReference<Object> {
                     // ignore and continue
                 }
             }
-            
+
             final JavaLangAccess jla = SharedSecrets.getJavaLangAccess();
-            
+
             running = true;
-            
+
             // 消费报废的Finalizer引用
             while(true) {
                 try {
@@ -279,12 +279,12 @@ final class Finalizer extends FinalReference<Object> {
                      * 如果queue里没有引用，就陷入阻塞，直到队列里有引用时才被唤醒
                      */
                     Finalizer f = (Finalizer) queue.remove();
-                    f.runFinalizer(jla);
+                    f.runFinalizer((jdk.internal.access.JavaLangAccess) jla);
                 } catch(InterruptedException x) {
                     // ignore and continue
                 }
             }
         }
     }
-    
+
 }

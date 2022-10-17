@@ -124,6 +124,7 @@ public class Thread extends VMObject {
   /** Memory operations */
   public void oopsDo(AddressVisitor oopVisitor) {
     // FIXME: Empty for now; will later traverse JNI handles and
+    // FIXME：现在是空的；稍后将遍历JNI句柄和
     // pending exception
   }
 
@@ -154,6 +155,9 @@ public class Thread extends VMObject {
     // only a debugging system at the moment we need access to the
     // underlying thread, which is only present for Java threads; see
     // JavaThread.java.
+    // 在Serviceability Agent中，我们需要访问线程的堆栈指针才能回答这个问题。
+    // 因为它目前只是一个调试系统，所以我们需要访问底层线程，它只存在于Java线程中；
+    // 请参见JavaThread.java。
     return false;
   }
 

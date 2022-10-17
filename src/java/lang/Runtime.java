@@ -46,26 +46,30 @@ import jdk.internal.reflect.Reflection;
  * <p>
  * An application cannot create its own instance of this class.
  *
+ * 每个Java应用程序都有一个Runtime类实例，它允许应用程序与运行应用程序的环境交互。
+ * 可以从getRuntime方法获取当前运行时。
+ * 应用程序无法创建自己的此类实例。
+ *
  * @author unascribed
  * @see java.lang.Runtime#getRuntime()
  * @since 1.0
  */
 // 运行时对象，持有一些底层操作工具方法
 public class Runtime {
-    
+
     // 单例
     private static final Runtime currentRuntime = new Runtime();
-    
+
     private static Version version; // 当前JDK版本
-    
-    
-    
+
+
+
     /*▼ 构造器/工厂 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /** Don't let anyone else instantiate this class */
     private Runtime() {
     }
-    
+
     /**
      * Returns the runtime object associated with the current Java application.
      * Most of the methods of class {@code Runtime} are instance
@@ -74,33 +78,38 @@ public class Runtime {
      * @return the {@code Runtime} object associated with the current
      * Java application.
      */
+    // 返回与当前Java应用程序关联的运行时对象。
+    // 类{@code Runtime}的大多数方法都是实例方法，必须针对当前运行时对象进行调用。
+    // @返回与当前Java应用程序关联的{@code Runtime}对象。
     // 返回Runtime对象(工厂方法)
     public static Runtime getRuntime() {
         return currentRuntime;
     }
-    
+
     /*▲ 构造器/工厂 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 关机回调 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Registers a new virtual-machine shutdown hook.
+     * 注册新的虚拟机关闭挂钩。
      *
      * <p> The Java virtual machine <i>shuts down</i> in response to two kinds
      * of events:
-     *
+     * <p>Java虚拟机<i>关闭<i>以响应两种事件：
      * <ul>
      *
      * <li> The program <i>exits</i> normally, when the last non-daemon
      * thread exits or when the {@link #exit exit} (equivalently,
      * {@link System#exit(int) System.exit}) method is invoked, or
-     *
+     * <li>当最后一个非守护进程线程退出或调用{@link#exit exit}（相当于{@linkSystem#exit（int）System.exit}）方法时，
+     * 程序通常退出，或
      * <li> The virtual machine is <i>terminated</i> in response to a
      * user interrupt, such as typing {@code ^C}, or a system-wide event,
      * such as user logoff or system shutdown.
-     *
+     * <li>响应用户中断（例如键入{@code^C}）或系统范围的事件（例如用户注销或系统关闭），虚拟机被终止。
      * </ul>
      *
      * <p> A <i>shutdown hook</i> is simply an initialized but unstarted
@@ -110,15 +119,22 @@ public class Runtime {
      * halt. Note that daemon threads will continue to run during the shutdown
      * sequence, as will non-daemon threads if shutdown was initiated by
      * invoking the {@link #exit exit} method.
+     * <p><i>关闭挂钩</i>只是一个已初始化但未启动的线程。当虚拟机开始其关闭序列时，
+     * 它将以某种未指定的顺序启动所有注册的关闭挂钩，并让它们同时运行。
+     * 当所有的钩子都挂好后，它就会停下来。请注意，如果通过调用{@link#exit-exit}方法启动关机，
+     * 守护进程线程将在关机过程中继续运行，非守护进程线程也将继续运行。
      *
      * <p> Once the shutdown sequence has begun it can be stopped only by
      * invoking the {@link #halt halt} method, which forcibly
      * terminates the virtual machine.
+     * <p>关闭序列开始后，只能通过调用{@link#halt-halt}方法来停止它，该方法强制终止虚拟机。
      *
      * <p> Once the shutdown sequence has begun it is impossible to register a
      * new shutdown hook or de-register a previously-registered hook.
      * Attempting either of these operations will cause an
      * {@link IllegalStateException} to be thrown.
+     * <p>一旦关闭序列开始，就不可能注册新的关闭挂钩或取消注册以前注册的挂钩。
+     * 尝试这些操作之一将导致抛出{@link IllegalStateException}。
      *
      * <p> Shutdown hooks run at a delicate time in the life cycle of a virtual
      * machine and should therefore be coded defensively.  They should, in
@@ -128,6 +144,9 @@ public class Runtime {
      * the process of shutting down.  Attempts to use other thread-based
      * services such as the AWT event-dispatch thread, for example, may lead to
      * deadlocks.
+     * <p>关闭挂钩在虚拟机生命周期中的一个微妙时刻运行，因此应该进行防御性编码。
+     * 特别是，它们应该是线程安全的，并尽可能避免死锁。他们也不应该盲目依赖那些可能已经注册了自己的关闭挂钩的服务，
+     * 因此可能自己也在关闭过程中。例如，尝试使用其他基于线程的服务（如AWT事件分派线程）可能会导致死锁。
      *
      * <p> Shutdown hooks should also finish their work quickly.  When a
      * program invokes {@link #exit exit} the expectation is
@@ -137,6 +156,9 @@ public class Runtime {
      * which to shut down and exit.  It is therefore inadvisable to attempt any
      * user interaction or to perform a long-running computation in a shutdown
      * hook.
+     * <p>关闭挂钩也应快速完成其工作。当程序调用{@link#exit-exit}时，预期虚拟机将立即关闭并退出。
+     * 当虚拟机由于用户注销或系统关闭而终止时，基础操作系统可能只允许在固定的时间内关闭并退出。
+     * 因此，尝试任何用户交互或在关闭挂钩中执行长时间运行的计算都是不可取的。
      *
      * <p> Uncaught exceptions are handled in shutdown hooks just as in any
      * other thread, by invoking the
@@ -145,6 +167,9 @@ public class Runtime {
      * method prints the exception's stack trace to {@link System#err} and
      * terminates the thread; it does not cause the virtual machine to exit or
      * halt.
+     * <p>通过调用线程{@link ThreadGroup}对象的{@link-ThreadGroup#uncaughException uncaughtException}方法，
+     * 可以像在任何其他线程中一样在关闭挂钩中处理未捕获的异常。
+     * 此方法的默认实现将异常的堆栈跟踪打印到{@link System#err}并终止线程；它不会导致虚拟机退出或停止。
      *
      * <p> In rare circumstances the virtual machine may <i>abort</i>, that is,
      * stop running without shutting down cleanly.  This occurs when the
@@ -155,12 +180,17 @@ public class Runtime {
      * attempting to access nonexistent memory.  If the virtual machine aborts
      * then no guarantee can be made about whether or not any shutdown hooks
      * will be run.
+     * <p>在极少数情况下，虚拟机可能会<i>中止</i>，即停止运行而不彻底关闭。当虚拟机在外部终止时会发生这种情况，
+     * 例如，在Unix上使用{@code SIGKILL}信号或在Microsoft Windows上使用{@code TerminateProcess}调用。
+     * 如果本机方法出错，例如破坏内部数据结构或试图访问不存在的内存，虚拟机也可能会中止。如果虚拟机中止，
+     * 则无法保证是否会运行任何关闭挂钩。
      *
      * @param hook An initialized but unstarted {@link Thread} object
      *
      * @throws IllegalArgumentException If the specified hook has already been registered,
      *                                  or if it can be determined that the hook is already running or
      *                                  has already been run
+     *                                  如果指定的钩子已经注册，或者可以确定钩子已经运行或已经运行
      * @throws IllegalStateException    If the virtual machine is already in the process
      *                                  of shutting down
      * @throws SecurityException        If a security manager is present and it denies
@@ -183,11 +213,11 @@ public class Runtime {
         if(sm != null) {
             sm.checkPermission(new RuntimePermission("shutdownHooks"));
         }
-        
+
         // 注册用户级别的钩子
         ApplicationShutdownHooks.add(hook);
     }
-    
+
     /**
      * De-registers a previously-registered virtual-machine shutdown hook.
      *
@@ -211,17 +241,17 @@ public class Runtime {
         if(sm != null) {
             sm.checkPermission(new RuntimePermission("shutdownHooks"));
         }
-        
+
         // 移除用户级别的钩子
         return ApplicationShutdownHooks.remove(hook);
     }
-    
+
     /*▲ 关机回调 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 关机 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Terminates the currently running Java virtual machine by initiating its
      * shutdown sequence.  This method never returns normally.  The argument
@@ -259,10 +289,10 @@ public class Runtime {
         if(security != null) {
             security.checkExit(status);
         }
-        
+
         Shutdown.exit(status);
     }
-    
+
     /**
      * Forcibly terminates the currently running Java virtual machine.  This
      * method never returns normally.
@@ -297,20 +327,20 @@ public class Runtime {
         if(sm != null) {
             sm.checkExit(status);
         }
-        
+
         // 通知虚拟机程序该终止了
         Shutdown.beforeHalt();
-        
+
         // 关闭虚拟机
         Shutdown.halt(status);
     }
-    
+
     /*▲ 关机 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 进程/命令行 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Executes the specified string command in a separate process.
      *
@@ -336,7 +366,7 @@ public class Runtime {
     public Process exec(String command) throws IOException {
         return exec(command, null, null);
     }
-    
+
     /**
      * Executes the specified string command in a separate process with the
      * specified environment.
@@ -369,7 +399,7 @@ public class Runtime {
     public Process exec(String command, String[] envp) throws IOException {
         return exec(command, envp, null);
     }
-    
+
     /**
      * Executes the specified string command in a separate process with the
      * specified environment and working directory.
@@ -415,16 +445,16 @@ public class Runtime {
         if(command.length() == 0) {
             throw new IllegalArgumentException("Empty command");
         }
-        
+
         StringTokenizer st = new StringTokenizer(command);
         String[] cmdarray = new String[st.countTokens()];
         for(int i = 0; st.hasMoreTokens(); i++) {
             cmdarray[i] = st.nextToken();
         }
-        
+
         return exec(cmdarray, envp, dir);
     }
-    
+
     /**
      * Executes the specified command and arguments in a separate process.
      *
@@ -452,7 +482,7 @@ public class Runtime {
     public Process exec(String cmdarray[]) throws IOException {
         return exec(cmdarray, null, null);
     }
-    
+
     /**
      * Executes the specified command and arguments in a separate process
      * with the specified environment.
@@ -487,7 +517,7 @@ public class Runtime {
     public Process exec(String[] cmdarray, String[] envp) throws IOException {
         return exec(cmdarray, envp, null);
     }
-    
+
     /**
      * Executes the specified command and arguments in a separate process with
      * the specified environment and working directory.
@@ -570,13 +600,13 @@ public class Runtime {
             .directory(dir)     // 为进程构造器设定工作目录
             .start();
     }
-    
+
     /*▲ 进程/命令行 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 清理 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Runs the garbage collector.
      * Calling this method suggests that the Java virtual machine expend
@@ -595,7 +625,7 @@ public class Runtime {
      */
     // 通知虚拟机执行垃圾回收操作
     public native void gc();
-    
+
     /**
      * Runs the finalization methods of any objects pending finalization.
      * Calling this method suggests that the Java virtual machine expend
@@ -618,13 +648,13 @@ public class Runtime {
     public void runFinalization() {
         SharedSecrets.getJavaLangRefAccess().runFinalization();
     }
-    
+
     /*▲ 清理 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 信息 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the maximum amount of memory that the Java virtual machine will attempt to use.
      * If there is no inherent limit then the value {@link java.lang.Long#MAX_VALUE} will be returned.
@@ -639,7 +669,7 @@ public class Runtime {
      * max >= total >= free
      */
     public native long maxMemory();
-    
+
     /**
      * Returns the total amount of memory in the Java virtual machine.
      * The value returned by this method may vary over time, depending on the host environment.
@@ -654,7 +684,7 @@ public class Runtime {
      * max >= total >= free
      */
     public native long totalMemory();
-    
+
     /**
      * Returns the amount of free memory in the Java Virtual Machine.
      * Calling the {@code gc} method may result in increasing the value returned by {@code freeMemory.}
@@ -668,8 +698,8 @@ public class Runtime {
      * max >= total >= free
      */
     public native long freeMemory();
-    
-    
+
+
     /**
      * Returns the number of processors available to the Java virtual machine.
      *
@@ -685,8 +715,8 @@ public class Runtime {
      */
     // 返回虚拟机可用的处理器数量
     public native int availableProcessors();
-    
-    
+
+
     /**
      * Returns the version of the Java Runtime Environment as a {@link Version}.
      *
@@ -699,16 +729,16 @@ public class Runtime {
         if(version == null) {
             version = new Version(VersionProps.versionNumbers(), VersionProps.pre(), VersionProps.build(), VersionProps.optional());
         }
-        
+
         return version;
     }
-    
+
     /*▲ 信息 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 本地库 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Loads the native library specified by the filename argument.  The filename
      * argument must be an absolute path name.
@@ -762,7 +792,7 @@ public class Runtime {
     public void load(String filename) {
         load0(Reflection.getCallerClass(), filename);
     }
-    
+
     /**
      * Loads the native library specified by the {@code libname}
      * argument.  The {@code libname} argument must not contain any platform
@@ -817,45 +847,45 @@ public class Runtime {
     public void loadLibrary(String libname) {
         loadLibrary0(Reflection.getCallerClass(), libname);
     }
-    
+
     // 加载指定名称的本地库(要求filename是本地库的绝对路径)
     synchronized void load0(Class<?> fromClass, String filename) {
         SecurityManager security = System.getSecurityManager();
         if(security != null) {
             security.checkLink(filename);
         }
-        
+
         // 如果filename不是绝对路径，则抛异常
         if(!(new File(filename).isAbsolute())) {
             throw new UnsatisfiedLinkError("Expecting an absolute path of the library: " + filename);
         }
-        
+
         // 加载指定名称的本地库
         ClassLoader.loadLibrary(fromClass, filename, true);
     }
-    
+
     // 加载指定名称的本地库，如"net"是指本地网络库
     synchronized void loadLibrary0(Class<?> fromClass, String libname) {
         SecurityManager security = System.getSecurityManager();
         if(security != null) {
             security.checkLink(libname);
         }
-        
+
         // 如果libname包含路径内部的分隔符，则抛异常
         if(libname.indexOf((int) File.separatorChar) != -1) {
             throw new UnsatisfiedLinkError("Directory separator should not appear in library name: " + libname);
         }
-        
+
         // 加载指定名称的本地库
         ClassLoader.loadLibrary(fromClass, libname, false);
     }
-    
+
     /*▲ 本地库 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 杂项 ███████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Not implemented, does nothing.
      *
@@ -868,7 +898,7 @@ public class Runtime {
     @Deprecated(since = "9", forRemoval = true)
     public void traceInstructions(boolean on) {
     }
-    
+
     /**
      * Not implemented, does nothing.
      *
@@ -881,31 +911,31 @@ public class Runtime {
     @Deprecated(since = "9", forRemoval = true)
     public void traceMethodCalls(boolean on) {
     }
-    
+
     /*▲ 杂项 ███████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
+
+
     // 版本号正则
     private static class VersionPattern {
         // $VNUM(-$PRE)?(\+($BUILD)?(\-$OPT)?)?
         // RE limits the format of version strings
         // ([1-9][0-9]*(?:(?:\.0)*\.[1-9][0-9]*)*)(?:-([a-zA-Z0-9]+))?(?:(\+)(0|[1-9][0-9]*)?)?(?:-([-a-zA-Z0-9.]+))?
-        
+
         static final String VNUM_GROUP = "VNUM";
         static final String PRE_GROUP = "PRE";
         static final String PLUS_GROUP = "PLUS";
         static final String BUILD_GROUP = "BUILD";
         static final String OPT_GROUP = "OPT";
-        
+
         private static final String VNUM = "(?<VNUM>[1-9][0-9]*(?:(?:\\.0)*\\.[1-9][0-9]*)*)";
         private static final String PRE = "(?:-(?<PRE>[a-zA-Z0-9]+))?";
         private static final String BUILD = "(?:(?<PLUS>\\+)(?<BUILD>0|[1-9][0-9]*)?)?";
         private static final String OPT = "(?:-(?<OPT>[-a-zA-Z0-9.]+))?";
         private static final String VSTR_FORMAT = VNUM + PRE + BUILD + OPT;
-        
+
         static final Pattern VSTR_PATTERN = Pattern.compile(VSTR_FORMAT);
     }
-    
+
     /**
      * A representation of a version string for an implementation of the
      * Java&nbsp;SE Platform.  A version string consists of a version number
@@ -1034,11 +1064,11 @@ public class Runtime {
     // JAVA版本信息
     public static final class Version implements Comparable<Version> {
         private final List<Integer> version;        // 版本号
-        
+
         private final Optional<String> pre;         // 预发行信息
         private final Optional<Integer> build;      // 构建信息
         private final Optional<String> optional;    // 附加信息
-        
+
         /*
          * List of version number components passed to this constructor MUST
          * be at least unmodifiable (ideally immutable). In the case on an
@@ -1051,7 +1081,7 @@ public class Runtime {
             this.build = build;
             this.optional = optional;
         }
-        
+
         /**
          * Parses the given string as a valid
          * <a href="#verStr">version string</a> containing a
@@ -1072,33 +1102,33 @@ public class Runtime {
             if(s == null) {
                 throw new NullPointerException();
             }
-    
+
             // Shortcut to avoid initializing VersionPattern when creating feature-version constants during startup
             if(isSimpleNumber(s)) {
                 return new Version(List.of(Integer.parseInt(s)), Optional.empty(), Optional.empty(), Optional.empty());
             }
-    
+
             Matcher m = VersionPattern.VSTR_PATTERN.matcher(s);
             if(!m.matches()) {
                 throw new IllegalArgumentException("Invalid version string: '" + s + "'");
             }
-    
+
             // $VNUM is a dot-separated list of integers of arbitrary length
             String[] split = m.group(VersionPattern.VNUM_GROUP).split("\\.");
             Integer[] version = new Integer[split.length];
             for(int i = 0; i<split.length; i++) {
                 version[i] = Integer.parseInt(split[i]);
             }
-    
+
             Optional<String> pre = Optional.ofNullable(m.group(VersionPattern.PRE_GROUP));
-    
+
             String b = m.group(VersionPattern.BUILD_GROUP);
-    
+
             // $BUILD is an integer
             Optional<Integer> build = (b == null) ? Optional.empty() : Optional.of(Integer.parseInt(b));
-    
+
             Optional<String> optional = Optional.ofNullable(m.group(VersionPattern.OPT_GROUP));
-    
+
             // empty '+'
             if(!build.isPresent()) {
                 if(m.group(VersionPattern.PLUS_GROUP) != null) {
@@ -1114,10 +1144,10 @@ public class Runtime {
                     }
                 }
             }
-    
+
             return new Version(List.of(version), pre, build, optional);
         }
-        
+
         /**
          * Returns the value of the major element of the version number.
          *
@@ -1135,7 +1165,7 @@ public class Runtime {
         public int major() {
             return feature();
         }
-        
+
         /**
          * Returns the value of the minor element of the version number, or
          * zero if it is absent.
@@ -1154,7 +1184,7 @@ public class Runtime {
         public int minor() {
             return interim();
         }
-        
+
         /**
          * Returns the value of the security element of the version number, or
          * zero if it is absent.
@@ -1173,7 +1203,7 @@ public class Runtime {
         public int security() {
             return update();
         }
-        
+
         /**
          * Returns an unmodifiable {@link java.util.List List} of the integers
          * represented in the <a href="#verNum">version number</a>.
@@ -1187,7 +1217,7 @@ public class Runtime {
         public List<Integer> version() {
             return version;
         }
-        
+
         /**
          * Returns the value of the <a href="#FEATURE">feature</a> element of
          * the version number.
@@ -1199,7 +1229,7 @@ public class Runtime {
         public int feature() {
             return version.get(0);
         }
-        
+
         /**
          * Returns the value of the <a href="#INTERIM">interim</a> element of
          * the version number, or zero if it is absent.
@@ -1211,7 +1241,7 @@ public class Runtime {
         public int interim() {
             return (version.size()>1 ? version.get(1) : 0);
         }
-        
+
         /**
          * Returns the value of the <a href="#UPDATE">update</a> element of the
          * version number, or zero if it is absent.
@@ -1223,7 +1253,7 @@ public class Runtime {
         public int update() {
             return (version.size()>2 ? version.get(2) : 0);
         }
-        
+
         /**
          * Returns the value of the <a href="#PATCH">patch</a> element of the
          * version number, or zero if it is absent.
@@ -1235,7 +1265,7 @@ public class Runtime {
         public int patch() {
             return (version.size()>3 ? version.get(3) : 0);
         }
-        
+
         /**
          * Returns the optional <a href="#pre">pre-release</a> information.
          *
@@ -1245,7 +1275,7 @@ public class Runtime {
         public Optional<String> pre() {
             return pre;
         }
-        
+
         /**
          * Returns the <a href="#build">build number</a>.
          *
@@ -1255,7 +1285,7 @@ public class Runtime {
         public Optional<Integer> build() {
             return build;
         }
-        
+
         /**
          * Returns <a href="#opt">optional</a> additional identifying build
          * information.
@@ -1266,7 +1296,7 @@ public class Runtime {
         public Optional<String> optional() {
             return optional;
         }
-        
+
         /**
          * Compares this version to another.
          *
@@ -1305,7 +1335,7 @@ public class Runtime {
         public int compareTo(Version obj) {
             return compare(obj, false);
         }
-        
+
         /**
          * Compares this version to another disregarding optional build
          * information.
@@ -1328,7 +1358,7 @@ public class Runtime {
         public int compareToIgnoreOptional(Version obj) {
             return compare(obj, true);
         }
-        
+
         /**
          * Returns a string representation of this version.
          *
@@ -1337,9 +1367,9 @@ public class Runtime {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder(version.stream().map(Object::toString).collect(Collectors.joining(".")));
-    
+
             pre.ifPresent(v -> sb.append("-").append(v));
-    
+
             if(build.isPresent()) {
                 sb.append("+").append(build.get());
                 if(optional.isPresent()) {
@@ -1351,10 +1381,10 @@ public class Runtime {
                     sb.append(optional.get());
                 }
             }
-    
+
             return sb.toString();
         }
-        
+
         /**
          * Determines whether this {@code Version} is equal to another object.
          *
@@ -1372,11 +1402,11 @@ public class Runtime {
             if(!ret) {
                 return false;
             }
-    
+
             Version that = (Version) obj;
             return (this.optional().equals(that.optional()));
         }
-        
+
         /**
          * Determines whether this {@code Version} is equal to another
          * disregarding optional build information.
@@ -1394,16 +1424,16 @@ public class Runtime {
             if(this == obj) {
                 return true;
             }
-    
+
             if(!(obj instanceof Version)) {
                 return false;
             }
-    
+
             Version that = (Version) obj;
-    
+
             return (this.version().equals(that.version()) && this.pre().equals(that.pre()) && this.build().equals(that.build()));
         }
-        
+
         /**
          * Returns the hash code of this version.
          *
@@ -1413,15 +1443,15 @@ public class Runtime {
         public int hashCode() {
             int h = 1;
             int p = 17;
-    
+
             h = p * h + version.hashCode();
             h = p * h + pre.hashCode();
             h = p * h + build.hashCode();
             h = p * h + optional.hashCode();
-    
+
             return h;
         }
-        
+
         private static boolean isSimpleNumber(String s) {
             for(int i = 0; i<s.length(); i++) {
                 char c = s.charAt(i);
@@ -1432,34 +1462,34 @@ public class Runtime {
             }
             return true;
         }
-        
+
         private int compare(Version obj, boolean ignoreOpt) {
             if(obj == null) {
                 throw new NullPointerException();
             }
-            
+
             int ret = compareVersion(obj);
             if(ret != 0) {
                 return ret;
             }
-            
+
             ret = comparePre(obj);
             if(ret != 0) {
                 return ret;
             }
-            
+
             ret = compareBuild(obj);
             if(ret != 0) {
                 return ret;
             }
-            
+
             if(!ignoreOpt) {
                 return compareOptional(obj);
             }
-            
+
             return 0;
         }
-        
+
         private int compareVersion(Version obj) {
             int size = version.size();
             int oSize = obj.version().size();
@@ -1473,7 +1503,7 @@ public class Runtime {
             }
             return size - oSize;
         }
-        
+
         private int comparePre(Version obj) {
             Optional<String> oPre = obj.pre();
             if(!pre.isPresent()) {
@@ -1494,7 +1524,7 @@ public class Runtime {
             }
             return 0;
         }
-        
+
         private int compareBuild(Version obj) {
             Optional<Integer> oBuild = obj.build();
             if(oBuild.isPresent()) {
@@ -1504,7 +1534,7 @@ public class Runtime {
             }
             return 0;
         }
-        
+
         private int compareOptional(Version obj) {
             Optional<String> oOpt = obj.optional();
             if(!optional.isPresent()) {
@@ -1519,7 +1549,7 @@ public class Runtime {
             }
             return 0;
         }
-        
+
     }
-    
+
 }

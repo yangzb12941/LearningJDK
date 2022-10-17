@@ -90,17 +90,17 @@ import java.util.stream.Stream;
  */
 // 系统工具类
 public final class System {
-    
+
     /** @see #initPhase2() */
     static ModuleLayer bootLayer;
-    
+
     /** The security manager for the system. */
     // 当前使用的安全管理器，默认为null
     private static volatile SecurityManager security;
-    
+
     // 当前系统关联的控制台，在IDE中通常为null
     private static volatile Console cons;
-    
+
     /**
      * System properties. The following properties are guaranteed to be defined:
      * <dl>
@@ -128,10 +128,10 @@ public final class System {
      * 该属性集是删减过的，完整的初始加载的环境变量保存在VM的字段savedProps中。
      */
     private static Properties props;
-    
+
     // 行分隔符，在windows上是'\r\n'
     private static String lineSeparator;
-    
+
     /**
      * The "standard" input stream. This stream is already
      * open and ready to supply input data. Typically this stream
@@ -139,7 +139,7 @@ public final class System {
      * the host environment or user.
      */
     public static final InputStream in = null;  // 标准输入流，会关联到某个默认的输入设备
-    
+
     /**
      * The "standard" output stream. This stream is already
      * open and ready to accept output data. Typically this stream
@@ -166,7 +166,7 @@ public final class System {
      * @see java.io.PrintStream#println(java.lang.String)
      */
     public static final PrintStream out = null; // 标准输出流，会关联到某个默认的输出设备
-    
+
     /**
      * The "standard" error output stream. This stream is already
      * open and ready to accept output data.
@@ -180,21 +180,21 @@ public final class System {
      * destination that is typically not continuously monitored.
      */
     public static final PrintStream err = null; // 标准错误流，会关联到某个默认的输出设备
-    
-    
+
+
     static {
         registerNatives();
     }
-    
-    
+
+
     /** Don't let anyone instantiate this class */
     private System() {
     }
-    
-    
-    
+
+
+
     /*▼ 标准流 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Reassigns the "standard" input stream.
      *
@@ -216,7 +216,7 @@ public final class System {
         checkIO();
         setIn0(in);
     }
-    
+
     /**
      * Reassigns the "standard" output stream.
      *
@@ -238,7 +238,7 @@ public final class System {
         checkIO();
         setOut0(out);
     }
-    
+
     /**
      * Reassigns the "standard" error output stream.
      *
@@ -260,21 +260,21 @@ public final class System {
         checkIO();
         setErr0(err);
     }
-    
-    
+
+
     // 为字段System.in关联(初始化)标准输入流
     private static native void setIn0(InputStream in);
     // 为字段System.out关联(初始化)标准输出流
     private static native void setOut0(PrintStream out);
     // 为字段System.err关联(初始化)标准错误流
     private static native void setErr0(PrintStream err);
-    
+
     /*▲ 标准流 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 复制 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Copies an array from the specified source array, beginning at the
      * specified position, to the specified position of the destination array.
@@ -368,16 +368,51 @@ public final class System {
      * @throws NullPointerException      if either {@code src} or
      *                                   {@code dest} is {@code null}.
      */
+    // 将数组从指定的源数组（从指定位置开始）复制到目标数组的指定位置。数组组件的子序列从src引用的源数组复制到dest引用的目标数组。
+    // 复制的组件数等于长度参数。
+    // 源阵列中位置srcPos到srcPos+length-1的组件将分别复制到目标阵列的位置destPos到destPos+lenghth-1。
+    // 如果src和dest参数引用同一数组对象，则执行复制时就好像将位置srcPos到srcPos+length-1处的组件首先复制到具有长度组件的临时数组中，
+    // 然后将临时数组的内容复制到目标数组的位置destPos到destPos+lendth-1处。
+    // 如果dest为null，则抛出NullPointerException。
+    // 如果src为null，则抛出NullPointerException，并且不修改目标数组。
+    // 否则，如果以下任何一项为真，则会抛出ArrayStoreException，
+    // 并且不会修改目标：
+    // src参数引用的对象不是数组。
+    // dest参数引用的对象不是数组。
+    // src参数和dest参数引用其组件类型为不同基元类型的数组。
+    // src参数引用具有基元组件类型的数组，
+    // dest参数引用具有引用组件类型的阵列。
+    //
+    // src参数引用具有引用组件类型的数组，dest参数引用具有基元组件类型的阵列。
+    // 否则，如果以下任何一项为真，将引发IndexOutOfBoundsException，并且不会修改目标：
+    // srcPos参数为负。
+    // destPos参数为负。
+    // 长度参数为负。
+    // srcPos+长度大于src。
+    // length，源数组的长度。
+    // destPos+长度大于dest。
+    // length，目标数组的长度。
+    // 否则，如果源数组从位置srcPos到srcPos+length-1的任何实际组件无法通过赋值转换转换为目标数组的组件类型，
+    // 则会引发ArrayStoreException。在这种情况下，让k是小于长度的最小非负整数，
+    // 这样src[srcPos+k]就无法转换为目标数组的组件类型；当抛出异常时，
+    // 从位置srcPos到srcPos+k-1的源数组组件将已经被复制到目标数组位置destPos到destPos+k-1，
+    // 并且不会修改目标数组的其他位置。（由于已经逐项列出的限制，本段实际上只适用于两个数组都有引用类型的组件类型的情况。）
+    // 参数： src–源数组。 srcPos–源阵列中的起始位置。 dest–目标阵列。 destPos–目标数据中的起始位置。 length–要复制的数组元素数。
+    // 投掷次数：
+    // IndexOutOfBoundsException–如果复制会导致数据访问超出数组边界。
+    // ArrayStoreException–如果src数组中的元素由于类型不匹配而无法存储到dest数组中。
+    // NullPointerException–如果src或dest为空。
+
     // 数组复制，从src的srcPos索引处复制length个元素放入dest的destPos索引处
     @HotSpotIntrinsicCandidate
     public static native void arraycopy(Object src, int srcPos, Object dest, int destPos, int length);
-    
+
     /*▲ 复制 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 系统属性 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Sets the system property indicated by the specified key.
      *
@@ -413,15 +448,15 @@ public final class System {
     // 添加一条系统属性：键值对<key, value>
     public static String setProperty(String key, String value) {
         checkKey(key);
-    
+
         SecurityManager sm = getSecurityManager();
         if(sm != null) {
             sm.checkPermission(new PropertyPermission(key, SecurityConstants.PROPERTY_WRITE_ACTION));
         }
-        
+
         return (String) props.setProperty(key, value);
     }
-    
+
     /**
      * Removes the system property indicated by the specified key.
      *
@@ -454,15 +489,15 @@ public final class System {
     // 移除指定key对应的系统属性
     public static String clearProperty(String key) {
         checkKey(key);
-    
+
         SecurityManager sm = getSecurityManager();
         if(sm != null) {
             sm.checkPermission(new PropertyPermission(key, "write"));
         }
-        
+
         return (String) props.remove(key);
     }
-    
+
     /**
      * Gets the system property indicated by the specified key.
      *
@@ -495,15 +530,15 @@ public final class System {
     // 返回指定key对应的系统属性的值。如果key不存在，返回null
     public static String getProperty(String key) {
         checkKey(key);
-    
+
         SecurityManager sm = getSecurityManager();
         if(sm != null) {
             sm.checkPropertyAccess(key);
         }
-        
+
         return props.getProperty(key);
     }
-    
+
     /**
      * Gets the system property indicated by the specified key.
      *
@@ -533,15 +568,15 @@ public final class System {
     // 返回指定key对应的系统属性的值。如果key不存在，返回默认值def
     public static String getProperty(String key, String def) {
         checkKey(key);
-    
+
         SecurityManager sm = getSecurityManager();
         if(sm != null) {
             sm.checkPropertyAccess(key);
         }
-        
+
         return props.getProperty(key, def);
     }
-    
+
     /**
      * Sets the system properties to the {@code Properties} argument.
      *
@@ -573,17 +608,17 @@ public final class System {
         if(sm != null) {
             sm.checkPropertiesAccess();
         }
-    
+
         if(props == null) {
             props = new Properties();
-        
+
             // 加载环境变量以填充props
             initProperties(props);
         }
-    
+
         System.props = props;
     }
-    
+
     /**
      * Determines the current system properties.
      *
@@ -722,16 +757,16 @@ public final class System {
         if(sm != null) {
             sm.checkPropertiesAccess();
         }
-    
+
         return props;
     }
-    
+
     /*▲ 系统属性 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 环境变量 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns an unmodifiable string map view of the current system environment.
      * The environment is a system-dependent mapping from names to
@@ -777,10 +812,10 @@ public final class System {
         if(sm != null) {
             sm.checkPermission(new RuntimePermission("getenv.*"));
         }
-        
+
         return ProcessEnvironment.getenv();
     }
-    
+
     /**
      * Gets the value of the specified environment variable. An
      * environment variable is a system-dependent external named
@@ -834,16 +869,16 @@ public final class System {
         if(sm != null) {
             sm.checkPermission(new RuntimePermission("getenv." + name));
         }
-        
+
         return ProcessEnvironment.getenv(name);
     }
-    
+
     /*▲ 环境变量 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 时间 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the current time in milliseconds.  Note that
      * while the unit of time of the return value is a millisecond,
@@ -868,7 +903,7 @@ public final class System {
      */
     @HotSpotIntrinsicCandidate
     public static native long currentTimeMillis();
-    
+
     /**
      * Returns the current value of the running Java Virtual Machine's
      * high-resolution time source, in nanoseconds.
@@ -914,15 +949,15 @@ public final class System {
     // 返回一个纳秒级的时间，不与具体的日期挂钩，只反应某段流逝的时间，可用来计数
     @HotSpotIntrinsicCandidate
     public static native long nanoTime();
-    
+
     /*▲ 时间 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 日志 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /* 默认实现：LoggingProviderImpl$JULWrapper*/
-    
+
     /**
      * Returns an instance of {@link Logger Logger} for the caller's
      * use.
@@ -958,16 +993,16 @@ public final class System {
     @CallerSensitive
     public static Logger getLogger(String name) {
         Objects.requireNonNull(name);
-    
+
         // 获取getLogger()方法的调用者所处的类
         final Class<?> caller = Reflection.getCallerClass();
         if(caller == null) {
             throw new IllegalCallerException("no caller frame");
         }
-    
+
         return LazyLoggers.getLogger(name, caller.getModule());
     }
-    
+
     /**
      * Returns a localizable instance of {@link Logger Logger} for the caller's use.
      * The returned logger will use the provided resource bundle for message localization.
@@ -1010,16 +1045,16 @@ public final class System {
     @CallerSensitive
     public static Logger getLogger(String name, ResourceBundle bundle) {
         Objects.requireNonNull(name);
-    
+
         final ResourceBundle rb = Objects.requireNonNull(bundle);
-    
+
         final Class<?> caller = Reflection.getCallerClass();
         if(caller == null) {
             throw new IllegalCallerException("no caller frame");
         }
-    
+
         final SecurityManager sm = System.getSecurityManager();
-    
+
         /*
          * We don't use LazyLoggers if a resource bundle is specified.
          * Bootstrap sensitive classes in the JDK do not use resource bundles when logging.
@@ -1029,16 +1064,16 @@ public final class System {
             final PrivilegedAction<Logger> pa = () -> LoggerFinder.accessProvider().getLocalizedLogger(name, rb, caller.getModule());
             return AccessController.doPrivileged(pa, null, LoggerFinder.LOGGERFINDER_PERMISSION);
         }
-    
+
         return LoggerFinder.accessProvider().getLocalizedLogger(name, rb, caller.getModule());
     }
-    
+
     /*▲ 日志 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 加载本地库 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Loads the native library specified by the filename argument.  The filename
      * argument must be an absolute path name.
@@ -1081,7 +1116,7 @@ public final class System {
     public static void load(String filename) {
         Runtime.getRuntime().load0(Reflection.getCallerClass(), filename);
     }
-    
+
     /**
      * Loads the native library specified by the {@code libname}
      * argument.  The {@code libname} argument must not contain any platform
@@ -1119,7 +1154,7 @@ public final class System {
     public static void loadLibrary(String libname) {
         Runtime.getRuntime().loadLibrary0(Reflection.getCallerClass(), libname);
     }
-    
+
     /**
      * Maps a library name into a platform-specific string representing a native library.
      *
@@ -1134,11 +1169,11 @@ public final class System {
      */
     // 返回指定名称的本地库在当前平台上的名称，如从"net"映射到"net.dll"
     public static native String mapLibraryName(String libname);
-    
+
     /*▲ 加载本地库 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /**
      * Runs the garbage collector.
      *
@@ -1161,7 +1196,7 @@ public final class System {
     public static void gc() {
         Runtime.getRuntime().gc();
     }
-    
+
     /**
      * Runs the finalization methods of any objects pending finalization.
      *
@@ -1184,7 +1219,7 @@ public final class System {
     public static void runFinalization() {
         Runtime.getRuntime().runFinalization();
     }
-    
+
     /**
      * Returns the same hash code for the given object as
      * would be returned by the default method hashCode(),
@@ -1206,7 +1241,7 @@ public final class System {
      */
     @HotSpotIntrinsicCandidate
     public static native int identityHashCode(Object x);
-    
+
     /**
      * Returns the system-dependent line separator string.  It always
      * returns the same value - the initial value of the {@linkplain
@@ -1223,7 +1258,7 @@ public final class System {
     public static String lineSeparator() {
         return lineSeparator;
     }
-    
+
     /**
      * Terminates the currently running Java Virtual Machine. The
      * argument serves as a status code; by convention, a nonzero status
@@ -1248,7 +1283,7 @@ public final class System {
     public static void exit(int status) {
         Runtime.getRuntime().exit(status);
     }
-    
+
     /**
      * Returns the unique {@link java.io.Console Console} object associated
      * with the current Java virtual machine, if any.
@@ -1260,7 +1295,7 @@ public final class System {
     // 返回为当前JVM环境关联的终端（在IDE中运行项目时，此处往往返回null）
     public static Console console() {
         Console c;
-    
+
         if((c = cons) == null) {
             synchronized(System.class) {
                 if((c = cons) == null) {
@@ -1268,10 +1303,10 @@ public final class System {
                 }
             }
         }
-    
+
         return c;
     }
-    
+
     /**
      * Returns the channel inherited from the entity that created this Java virtual machine.
      *
@@ -1296,7 +1331,7 @@ public final class System {
     public static Channel inheritedChannel() throws IOException {
         return SelectorProvider.provider().inheritedChannel();
     }
-    
+
     /**
      * Gets the system security interface.
      *
@@ -1310,7 +1345,7 @@ public final class System {
     public static SecurityManager getSecurityManager() {
         return security;
     }
-    
+
     /**
      * Sets the System security.
      *
@@ -1325,6 +1360,13 @@ public final class System {
      * security manager. If the argument is {@code null} and no
      * security manager has been established, then no action is taken and
      * the method simply returns.
+     *
+     * 设置系统安全性。
+     * 如果已经安装了安全管理器，此方法首先使用{@code RuntimePermission（“setSecurityManager”）}
+     * 权限调用安全管理器的{@code checkPermission}方法，以确保可以替换现有安全管理器。
+     *
+     * 这可能导致抛出{@code SecurityException}。
+     * 否则，将参数设置为当前安全管理器。如果参数为{@code null}，并且没有建立安全管理器，则不执行任何操作，方法只返回。
      *
      * @param s the security manager.
      *
@@ -1341,7 +1383,7 @@ public final class System {
             // ensure image reader is initialized
             Object.class.getResource("java/lang/ANY");
         }
-    
+
         if(s != null) {
             try {
                 s.checkPackageAccess("java.lang");
@@ -1349,29 +1391,35 @@ public final class System {
                 // no-op
             }
         }
-    
+
         setSecurityManager0(s);
     }
-    
-    
+
+
     /**
      * Initialize the system class.  Called after thread initialization.
+     * 初始化系统类。在线程初始化后调用。
      */
     // VM初始化第一阶段
     private static void initPhase1() {
-        
+
         /*
          * VM might invoke JNU_NewStringPlatform() to set those encoding sensitive properties
          * (user.home, user.name, boot.class.path, etc.) during "props" initialization, in which it may need access, via System.getProperty(),
          * to the related system encoding property that have been initialized (put into "props") at early stage of the initialization.
          * So make sure the "props" is available at the very beginning of the initialization and all system properties to be put into it directly.
+
+         * VM可能会调用JNU_NewStringPlatform（）来设置那些编码敏感属性
+         * 在“props”初始化期间（user.home、user.name、boot.class.path等），可能需要通过System.getProperty（）进行访问，
+         * 在初始化的早期阶段已经初始化（放入“props”中）的相关系统编码属性。
+         * 因此，请确保在初始化开始时“props”可用，并将所有系统属性直接放入其中。
          */
         // 创建空的Properties容器
         props = new Properties(84);
-        
+
         // 加载环境变量以填充props
         initProperties(props);  // initialized by the VM
-        
+
         /*
          * There are certain system configurations that may be controlled by VM options
          * such as the maximum amount of direct memory and Integer cache size used to support the object identity semantics of autoboxing.
@@ -1380,50 +1428,58 @@ public final class System {
          * See java.lang.Integer.IntegerCache and the VM.saveAndRemoveProperties method for example.
          * Save a private copy of the system properties object that can only be accessed by the internal implementation.
          * Remove certain system properties that are not intended for public access.
+         *某些系统配置可能由VM选项控制
+         *例如，用于支持自动装箱的对象标识语义的最大直接内存量和Integer缓存大小。
+         *通常，库将从VM设置的属性中获取这些值。
+         *如果属性仅供内部实现使用，则应从系统属性中删除这些属性。
+         *请参见java.lang.Integer.IntegerCache和VM。例如，saveAndRemoveProperties方法。
+         *保存系统属性对象的私有副本，该副本只能由内部实现访问。
+         *删除不用于公共访问的某些系统属性。
          */
         // 将加载的环境变量设置给虚拟机，并移除一些需要外部设置的环境变量
         VM.saveAndRemoveProperties(props);
-        
+
         lineSeparator = props.getProperty("line.separator");
-        
+
         // 初始化一些只读的系统属性
         StaticProperty.javaHome();  // Load StaticProperty to cache the property values
         // 初始化JDK版本信息
         VersionProps.init();
-        
+
         // 在Java层构造标准输入流、标准输出流、标准错误流对象
         FileInputStream fdIn = new FileInputStream(FileDescriptor.in);
         FileOutputStream fdOut = new FileOutputStream(FileDescriptor.out);
         FileOutputStream fdErr = new FileOutputStream(FileDescriptor.err);
-        
+
         // 为字段System.in关联(初始化)标准输入流
         setIn0(new BufferedInputStream(fdIn));
         // 为字段System.out关联(初始化)标准输出流
         setOut0(newPrintStream(fdOut, props.getProperty("sun.stdout.encoding")));
         // 为字段System.err关联(初始化)标准错误流
         setErr0(newPrintStream(fdErr, props.getProperty("sun.stderr.encoding")));
-        
+
         // Setup Java signal handlers for HUP, TERM, and INT (where available).
+        // 为HUP、TERM和INT（如果可用）设置Java信号处理程序。
         Terminator.setup();
-        
+
         /*
          * Initialize any miscellaneous operating system settings that need to be set for the class libraries.
          * Currently this is no-op everywhere except for Windows where the process-wide error mode is set before the java.io classes are used.
          */
         // 设置一些操作系统相关的选项
         VM.initializeOSEnvironment();
-        
+
         /*
          * The main thread is not added to its thread group in the same way as other threads;
          * we must do it ourselves here.
          */
         Thread current = Thread.currentThread();
         current.getThreadGroup().add(current);
-        
+
         /* register shared secrets */
         // 初始化JavaLangAccess后门
         setJavaLangAccess();
-        
+
         /*
          * Subsystems that are invoked during initialization can invoke VM.isBooted() in order to avoid doing things
          * that should wait until the VM is fully initialized.
@@ -1432,10 +1488,12 @@ public final class System {
          */
         VM.initLevel(1);    // VM初始化第一阶段已完成
     }
-    
+
     /**
      * Invoked by VM.  Phase 2 module system initialization.
+     * 由VM调用。第2阶段模块系统初始化。
      * Only classes in java.base can be loaded in this phase.
+     * 只有java中的类。基础可以在此阶段加载。
      *
      * @param printToStderr   print exceptions to stderr rather than stdout
      * @param printStackTrace print stack trace when exception occurs
@@ -1450,52 +1508,68 @@ public final class System {
             logInitException(printToStderr, printStackTrace, "Error occurred during initialization of boot layer", e);
             return -1; // JNI_ERR
         }
-        
+
         // module system initialized
         VM.initLevel(2);    // VM初始化第二阶段已完成
-        
+
         return 0; // JNI_OK
     }
-    
+
     /**
      * Invoked by VM.  Phase 3 is the final system initialization:
      * 1. set security manager
      * 2. set system class loader
      * 3. set TCCL
+     * 由VM调用。阶段3是最后的系统初始化：
+     * 1.设置安全管理器
+     * 2.设置系统类加载器
+     * 3.设置TCCL 线程上下文类加载器（ThreadContextClassLoader)
+     * Java 提供了很多服务提供者接口（Service Provider Interface，SPI），
+     * 允许第三方为这些接口提供实现。常见的 SPI 有 JDBC、JCE、JNDI、JAXP 和 JBI 等。
+     * 这些 SPI 的接口由 Java 核心库来提供，而这些 SPI 的实现代码则是作为 Java 应用所依赖的
+     * jar 包被包含进类路径（CLASSPATH）里。SPI接口中的代码经常需要加载具体的实现类。
+     * 那么问题来了，SPI的接口是Java核心库的一部分，是由启动类加载器(Bootstrap Classloader)来加载的；
+     * SPI的实现类是由应用程序类加载器(Application ClassLoader)来加载的。引导类加载器是无法找到 SPI
+     * 的实现类的，因为依照双亲委派模型，BootstrapClassloader无法委派AppClassLoader来加载类。
+     * 而线程上下文类加载器破坏了“双亲委派模型”，可以在执行线程中抛弃双亲委派加载链模式，使程序可以逆向使用类加载器。
      *
      * This method must be called after the module system initialization.
      * The security manager and system class loader may be custom class from
      * the application classpath or modulepath.
+     * 必须在模块系统初始化后调用此方法。
+     * 安全管理器和系统类加载器可以是来自应用程序类路径或模块路径的自定义类。
      */
     // VM初始化第三阶段(初始化安全管理器)和第四阶段(初始化系统类加载器，并将其设置到当前线程的上下文中)
     private static void initPhase3() {
         // set security manager
         String cn = System.getProperty("java.security.manager");
-        
+
         // 如果定义了"java.security.manager"属性
         if(cn != null) {
             // 使用默认的安全管理器实现
             if(cn.isEmpty() || "default".equals(cn)) {
                 System.setSecurityManager(new SecurityManager());
-                
+
                 // 使用自定义的安全管理器类
             } else {
                 try {
                     // 创建自定义安全管理器的类对象
                     Class<?> c = Class.forName(cn, false, ClassLoader.getBuiltinAppClassLoader());
                     Constructor<?> ctor = c.getConstructor();
-                    
+
                     // Must be a public subclass of SecurityManager with a public no-arg constructor
+                    // 必须是具有公共无参数构造函数的SecurityManager的公共子类
                     if(!SecurityManager.class.isAssignableFrom(c) || !Modifier.isPublic(c.getModifiers()) || !Modifier.isPublic(ctor.getModifiers())) {
                         throw new Error("Could not create SecurityManager: " + ctor.toString());
                     }
-                    
+
                     // custom security manager implementation may be in unnamed module or a named module but non-exported package
+                    // 自定义安全管理器实现可能位于未命名的模块或命名的模块中，但不是导出的包
                     ctor.setAccessible(true);
-                    
+
                     // 实例化自定义安全管理器
                     SecurityManager sm = (SecurityManager) ctor.newInstance();
-                    
+
                     // 设置安全管理器
                     System.setSecurityManager(sm);
                 } catch(Exception e) {
@@ -1503,21 +1577,21 @@ public final class System {
                 }
             }
         }
-        
+
         // initializing the system class loader
         VM.initLevel(3);    // VM初始化第三阶段已完成
-        
+
         // system class loader initialized
         ClassLoader scl = ClassLoader.initSystemClassLoader();  // 初始化系统类加载器，默认为内置的AppClassLoader
-        
+
         // set TCCL
         Thread.currentThread().setContextClassLoader(scl);  // 将系统类加载器设置为当前线程的上下文类加载器
-        
+
         // system is fully initialized
         VM.initLevel(4);    // VM初始化第四阶段已完成
     }
-    
-    
+
+
     /**
      * Register the natives via the static initializer.
      *
@@ -1527,16 +1601,16 @@ public final class System {
      * described in the initializeSystemClass method.
      */
     private static native void registerNatives();
-    
-    
-    
+
+
+
     private static void checkIO() {
         SecurityManager sm = getSecurityManager();
         if(sm != null) {
             sm.checkPermission(new RuntimePermission("setIO"));
         }
     }
-    
+
     private static void checkKey(String key) {
         if(key == null) {
             throw new NullPointerException("key can't be null");
@@ -1545,7 +1619,7 @@ public final class System {
             throw new IllegalArgumentException("key can't be empty");
         }
     }
-    
+
     private static synchronized void setSecurityManager0(final SecurityManager s) {
         SecurityManager sm = getSecurityManager();
         if(sm != null) {
@@ -1553,7 +1627,7 @@ public final class System {
             // can replace it.
             sm.checkPermission(new RuntimePermission("setSecurityManager"));
         }
-        
+
         if((s != null) && (s.getClass().getClassLoader() != null)) {
             // New security manager class is not on bootstrap classpath.
             // Cause policy to get initialized before we install the new
@@ -1570,13 +1644,13 @@ public final class System {
                 }
             });
         }
-        
+
         security = s;
     }
-    
+
     // 加载环境变量以填充props
     private static native Properties initProperties(Properties props);
-    
+
     /**
      * Create PrintStream for stdout/err based on encoding.
      */
@@ -1588,10 +1662,10 @@ public final class System {
             } catch(UnsupportedEncodingException uee) {
             }
         }
-        
+
         return new PrintStream(new BufferedOutputStream(fos, 128), true);
     }
-    
+
     /**
      * Logs an exception/error at initialization time to stdout or stderr.
      *
@@ -1604,12 +1678,12 @@ public final class System {
         if(VM.initLevel()<1) {
             throw new InternalError("system classes not initialized");
         }
-    
+
         PrintStream log = (printToStderr) ? err : out;
         if(msg != null) {
             log.println(msg);
         }
-    
+
         if(printStackTrace) {
             e.printStackTrace(log);
         } else {
@@ -1623,172 +1697,172 @@ public final class System {
             }
         }
     }
-    
+
     private static void setJavaLangAccess() {
         // Allow privileged classes outside of java.lang
         SharedSecrets.setJavaLangAccess(new JavaLangAccess() {
             public List<Method> getDeclaredPublicMethods(Class<?> klass, String name, Class<?>... parameterTypes) {
                 return klass.getDeclaredPublicMethods(name, parameterTypes);
             }
-            
+
             public jdk.internal.reflect.ConstantPool getConstantPool(Class<?> klass) {
                 return klass.getConstantPool();
             }
-            
+
             public boolean casAnnotationType(Class<?> klass, AnnotationType oldType, AnnotationType newType) {
                 return klass.casAnnotationType(oldType, newType);
             }
-            
+
             public AnnotationType getAnnotationType(Class<?> klass) {
                 return klass.getAnnotationType();
             }
-            
+
             public Map<Class<? extends Annotation>, Annotation> getDeclaredAnnotationMap(Class<?> klass) {
                 return klass.getDeclaredAnnotationMap();
             }
-            
+
             public byte[] getRawClassAnnotations(Class<?> klass) {
                 return klass.getRawAnnotations();
             }
-            
+
             public byte[] getRawClassTypeAnnotations(Class<?> klass) {
                 return klass.getRawTypeAnnotations();
             }
-            
+
             public byte[] getRawExecutableTypeAnnotations(Executable executable) {
                 return Class.getExecutableTypeAnnotationBytes(executable);
             }
-            
+
             public <E extends Enum<E>> E[] getEnumConstantsShared(Class<E> klass) {
                 return klass.getEnumConstantsShared();
             }
-            
+
             public void blockedOn(Interruptible b) {
                 Thread.blockedOn(b);
             }
-            
+
             public void registerShutdownHook(int slot, boolean registerShutdownInProgress, Runnable hook) {
                 Shutdown.add(slot, registerShutdownInProgress, hook);
             }
-            
+
             public Thread newThreadWithAcc(Runnable target, AccessControlContext acc) {
                 return new Thread(target, acc);
             }
-            
+
             @SuppressWarnings("deprecation")
             public void invokeFinalize(Object o) throws Throwable {
                 o.finalize();
             }
-            
+
             public ConcurrentHashMap<?, ?> createOrGetClassLoaderValueMap(ClassLoader cl) {
                 return cl.createOrGetClassLoaderValueMap();
             }
-            
+
             public Class<?> defineClass(ClassLoader loader, String name, byte[] b, ProtectionDomain pd, String source) {
                 return ClassLoader.defineClass1(loader, name, b, 0, b.length, pd, source);
             }
-            
+
             public Class<?> findBootstrapClassOrNull(ClassLoader cl, String name) {
                 return cl.findBootstrapClassOrNull(name);
             }
-            
+
             public Package definePackage(ClassLoader cl, String name, Module module) {
                 return cl.definePackage(name, module);
             }
-            
+
             public String fastUUID(long lsb, long msb) {
                 return Long.fastUUID(lsb, msb);
             }
-            
+
             public void addNonExportedPackages(ModuleLayer layer) {
                 SecurityManager.addNonExportedPackages(layer);
             }
-            
+
             public void invalidatePackageAccessCache() {
                 SecurityManager.invalidatePackageAccessCache();
             }
-            
+
             public Module defineModule(ClassLoader loader, ModuleDescriptor descriptor, URI uri) {
                 return new Module(null, loader, descriptor, uri);
             }
-            
+
             public Module defineUnnamedModule(ClassLoader loader) {
                 return new Module(loader);
             }
-            
+
             public void addReads(Module m1, Module m2) {
                 m1.implAddReads(m2);
             }
-            
+
             public void addReadsAllUnnamed(Module m) {
                 m.implAddReadsAllUnnamed();
             }
-            
+
             public void addExports(Module m, String pn, Module other) {
                 m.implAddExports(pn, other);
             }
-            
+
             public void addExportsToAllUnnamed(Module m, String pn) {
                 m.implAddExportsToAllUnnamed(pn);
             }
-            
+
             public void addOpens(Module m, String pn, Module other) {
                 m.implAddOpens(pn, other);
             }
-            
+
             public void addOpensToAllUnnamed(Module m, String pn) {
                 m.implAddOpensToAllUnnamed(pn);
             }
-            
+
             public void addOpensToAllUnnamed(Module m, Iterator<String> packages) {
                 m.implAddOpensToAllUnnamed(packages);
             }
-            
+
             public void addUses(Module m, Class<?> service) {
                 m.implAddUses(service);
             }
-            
+
             public boolean isReflectivelyExported(Module m, String pn, Module other) {
                 return m.isReflectivelyExported(pn, other);
             }
-            
+
             public boolean isReflectivelyOpened(Module m, String pn, Module other) {
                 return m.isReflectivelyOpened(pn, other);
             }
-            
+
             public ServicesCatalog getServicesCatalog(ModuleLayer layer) {
                 return layer.getServicesCatalog();
             }
-            
+
             public Stream<ModuleLayer> layers(ModuleLayer layer) {
                 return layer.layers();
             }
-            
+
             public Stream<ModuleLayer> layers(ClassLoader loader) {
                 return ModuleLayer.layers(loader);
             }
-            
+
             public String newStringNoRepl(byte[] bytes, Charset cs) throws CharacterCodingException {
                 return StringCoding.newStringNoRepl(bytes, cs);
             }
-            
+
             public byte[] getBytesNoRepl(String s, Charset cs) throws CharacterCodingException {
                 return StringCoding.getBytesNoRepl(s, cs);
             }
-            
+
             public String newStringUTF8NoRepl(byte[] bytes, int off, int len) {
                 return StringCoding.newStringUTF8NoRepl(bytes, off, len);
             }
-            
+
             public byte[] getBytesUTF8NoRepl(String s) {
                 return StringCoding.getBytesUTF8NoRepl(s);
             }
-            
+
         });
     }
-    
-    
-    
+
+
+
     /**
      * {@code System.Logger} instances log messages that will be
      * routed to the underlying logging framework the {@link System.LoggerFinder
@@ -1807,7 +1881,7 @@ public final class System {
      */
     // 日志接口
     public interface Logger {
-        
+
         /**
          * Returns the name of this logger.
          *
@@ -1815,7 +1889,7 @@ public final class System {
          */
         // 返回Logger的名称
         public String getName();
-        
+
         /**
          * Checks if a message of the given level would be logged by
          * this logger.
@@ -1828,7 +1902,7 @@ public final class System {
          * @throws NullPointerException if {@code level} is {@code null}.
          */
         public boolean isLoggable(Level level);
-        
+
         /**
          * Logs a message.
          *
@@ -1847,7 +1921,7 @@ public final class System {
         public default void log(Level level, String msg) {
             log(level, (ResourceBundle) null, msg, (Object[]) null);
         }
-        
+
         /**
          * Logs a message associated with a given throwable.
          *
@@ -1867,7 +1941,7 @@ public final class System {
         public default void log(Level level, String msg, Throwable thrown) {
             this.log(level, null, msg, thrown);
         }
-        
+
         /**
          * Logs a lazily supplied message.
          *
@@ -1890,7 +1964,7 @@ public final class System {
                 log(level, (ResourceBundle) null, msgSupplier.get(), (Object[]) null);
             }
         }
-        
+
         /**
          * Logs a lazily supplied message associated with a given throwable.
          *
@@ -1915,7 +1989,7 @@ public final class System {
                 this.log(level, null, msgSupplier.get(), thrown);
             }
         }
-        
+
         /**
          * Logs a localized message associated with a given throwable.
          *
@@ -1934,7 +2008,7 @@ public final class System {
          * @throws NullPointerException if {@code level} is {@code null}.
          */
         public void log(Level level, ResourceBundle bundle, String msg, Throwable thrown);
-        
+
         /**
          * Logs a message with an optional list of parameters.
          *
@@ -1956,7 +2030,7 @@ public final class System {
         public default void log(Level level, String format, Object... params) {
             this.log(level, null, format, params);
         }
-        
+
         /**
          * Logs a message with resource bundle and an optional list of
          * parameters.
@@ -1977,7 +2051,7 @@ public final class System {
          * @throws NullPointerException if {@code level} is {@code null}.
          */
         public void log(Level level, ResourceBundle bundle, String format, Object... params);
-        
+
         /**
          * Logs a message produced from the given object.
          *
@@ -2001,7 +2075,7 @@ public final class System {
                 this.log(level, (ResourceBundle) null, obj.toString(), (Object[]) null);
             }
         }
-        
+
         /**
          * System {@linkplain Logger loggers} levels.
          *
@@ -2053,7 +2127,7 @@ public final class System {
          */
         public enum Level {
             // for convenience, we're reusing java.util.logging.Level int values the mapping logic in sun.util.logging.PlatformLogger depends on this.
-            
+
             /**
              * A marker to indicate that all levels are enabled.
              * This level {@linkplain #getSeverity() severity} is
@@ -2096,13 +2170,13 @@ public final class System {
              * {@link Integer#MAX_VALUE}.
              */
             OFF(Integer.MAX_VALUE);  // typically mapped to/from j.u.l.Level.OFF
-            
+
             private final int severity;
-            
+
             private Level(int severity) {
                 this.severity = severity;
             }
-            
+
             /**
              * Returns the name of this level.
              *
@@ -2111,7 +2185,7 @@ public final class System {
             public final String getName() {
                 return name();
             }
-            
+
             /**
              * Returns the severity of this level.
              * A higher severity means a more severe condition.
@@ -2123,7 +2197,7 @@ public final class System {
             }
         }
     }
-    
+
     /**
      * The {@code LoggerFinder} service is responsible for creating, managing,
      * and configuring loggers to the underlying framework it uses.
@@ -2218,9 +2292,9 @@ public final class System {
          * as well as to obtain loggers from an instance of that class.
          */
         static final RuntimePermission LOGGERFINDER_PERMISSION = new RuntimePermission("loggerFinder");
-        
+
         private static volatile LoggerFinder service;
-        
+
         /**
          * Creates a new instance of {@code LoggerFinder}.
          *
@@ -2235,11 +2309,11 @@ public final class System {
         protected LoggerFinder() {
             this(checkPermission());
         }
-        
+
         private LoggerFinder(Void unused) {
             // nothing to do.
         }
-        
+
         /**
          * Returns an instance of {@link Logger Logger}
          * for the given {@code module}.
@@ -2257,7 +2331,7 @@ public final class System {
          *                              {@code RuntimePermission("loggerFinder")}.
          */
         public abstract Logger getLogger(String name, Module module);
-        
+
         /**
          * Returns the {@code LoggerFinder} instance. There is one
          * single system-wide {@code LoggerFinder} instance in
@@ -2278,7 +2352,7 @@ public final class System {
             }
             return accessProvider();
         }
-        
+
         static LoggerFinder accessProvider() {
             // We do not need to synchronize: LoggerFinderLoader will
             // always return the same instance, so if we don't have it,
@@ -2289,7 +2363,7 @@ public final class System {
             }
             return service;
         }
-        
+
         private static Void checkPermission() {
             final SecurityManager sm = System.getSecurityManager();
             if(sm != null) {
@@ -2297,7 +2371,7 @@ public final class System {
             }
             return null;
         }
-        
+
         /**
          * Returns a localizable instance of {@link Logger Logger}
          * for the given {@code module}.

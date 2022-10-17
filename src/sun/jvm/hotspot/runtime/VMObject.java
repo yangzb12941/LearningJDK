@@ -31,12 +31,14 @@ import sun.jvm.hotspot.types.*;
     Addresses. The rationale is that without this in place, every
     class would have to implement equals() and hashCode() with
     boilerplate code, a practice which is inherently error-prone. */
-
+//这是包装地址的所有VM运行时对象的基类。其基本原理是，如果没有这一点，
+// 每个类都必须使用样板代码实现equals（）和hashCode（），这是一种天生容易出错的实践。
 public class VMObject {
   protected Address addr;
 
   /** All of the objects have this as their constructor's signature
       anyway */
+  //无论如何，所有对象都将此作为其构造函数的签名
   public VMObject(Address addr) {
     this.addr = addr;
   }

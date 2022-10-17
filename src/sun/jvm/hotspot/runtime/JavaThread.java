@@ -38,6 +38,10 @@ import sun.jvm.hotspot.utilities.*;
     SolarisSPARCJavaThread, and the concrete subclasses are
     instantiated by the JavaThreadFactory in the Threads class. */
 
+//这是一个抽象类，因为有一些特定于操作系统和CPU的操作（如设置和获取最后一个Java帧指针）
+// 需要考虑在内。例如，这些操作由SolarisSPARCHavaThread实现，
+// 具体的子类由Threads类中的JavaThreadFactory实例化。
+
 public class JavaThread extends Thread {
   private static final boolean DEBUG = System.getProperty("sun.jvm.hotspot.runtime.JavaThread.DEBUG") != null;
 

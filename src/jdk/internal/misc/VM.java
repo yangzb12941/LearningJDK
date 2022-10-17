@@ -37,7 +37,7 @@ import static java.lang.Thread.State.WAITING;
 
 // 虚拟机工具类
 public class VM {
-    
+
     /**
      * The threadStatus field is set by the VM at state transition in the hotspot implementation.
      * Its value is set according to the JVM TI specification GetThreadState function.
@@ -48,17 +48,17 @@ public class VM {
     private static final int JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER = 0x0400;  // 线程状态：
     private static final int JVMTI_THREAD_STATE_WAITING_INDEFINITELY = 0x0010;  // 线程状态：
     private static final int JVMTI_THREAD_STATE_WAITING_WITH_TIMEOUT = 0x0020;  // 线程状态：
-    
+
     /** the init level when the VM is fully initialized */
     private static final int JAVA_LANG_SYSTEM_INITED = 1;   // VM初始化第一阶段已完成
     private static final int MODULE_SYSTEM_INITED = 2;   // VM初始化第二阶段已完成
     private static final int SYSTEM_LOADER_INITIALIZING = 3;   // VM初始化第三阶段已完成
     private static final int SYSTEM_BOOTED = 4;   // VM初始化第四阶段已完成
     private static final int SYSTEM_SHUTDOWN = 5;   // VM已关闭
-    
+
     // 0, 1, 2, ...
     private static volatile int initLevel;
-    
+
     /**
      * A user-settable upper limit on the maximum amount of allocatable direct buffer memory.
      * This value may be changed during VM initialization if "java" is launched with "-XX:MaxDirectMemorySize=<size>".
@@ -66,35 +66,40 @@ public class VM {
      * during JRE initialization it will be reset to the value specified on the command line,
      * if any, otherwise to Runtime.getRuntime().maxMemory().
      */
+    // 用户可设置的可分配直接缓冲存储器最大容量上限。如果使用“-XX:MaxDirectMemorySize=<size>”启动“java”，
+    // 则在VM初始化期间可能会更改此值。该字段的初始值是任意的；在JRE初始化期间，它将重置为命令行中指定的值（如果有），
+    // 否则重置为Runtime.getRuntime().maxMemory()。
     // 直接缓冲区默认大小
     private static long directMemory = 64 * 1024 * 1024;
-    
+
     /**
      * User-controllable flag that determines if direct buffers should be page aligned.
      * The "-XX:+PageAlignDirectMemory" option can be used to force buffers, allocated by ByteBuffer.allocateDirect, to be page aligned.
      */
+    // 用户可控制的标志，用于确定直接缓冲区是否应进行页面对齐。“-XX:+PageAlignDirectMemory”选项可用于强制缓冲区，
+    // 由ByteBuffer分配。allocateDirect，要与页面对齐。
     // 直接缓冲区是否需要页对齐
     private static boolean pageAlignDirectMemory;
-    
+
     // 虚拟机保存的原始系统属性集
     private static Map<String, String> savedProps;
-    
+
     /** Current count of objects pending for finalization */
     // 记录当前挂起(待处理)的报废FinalReference数量
     private static volatile int finalRefCount;
-    
+
     /** Peak count of objects pending for finalization */
     // 记录之前挂起(待处理)的报废FinalReference数量的最大值
     private static volatile int peakFinalRefCount;
-    
+
     private static final Object lock = new Object();
-    
-    
+
+
     static {
         initialize();
     }
-    
-    
+
+
     /**
      * Sets the init level.
      *
@@ -108,13 +113,13 @@ public class VM {
             if(level<=initLevel || level>SYSTEM_SHUTDOWN) {
                 throw new InternalError("Bad level: " + level);
             }
-            
+
             initLevel = level;
-            
+
             lock.notifyAll();
         }
     }
-    
+
     /**
      * Returns the current init level.
      */
@@ -122,7 +127,7 @@ public class VM {
     public static int initLevel() {
         return initLevel;
     }
-    
+
     /**
      * Waits for the init level to get the given value.
      *
@@ -136,7 +141,7 @@ public class VM {
             }
         }
     }
-    
+
     /**
      * Returns {@code true} if the module system has been initialized.
      *
@@ -146,7 +151,7 @@ public class VM {
     public static boolean isModuleSystemInited() {
         return VM.initLevel() >= MODULE_SYSTEM_INITED;
     }
-    
+
     /**
      * Returns {@code true} if the VM is fully initialized.
      */
@@ -154,7 +159,7 @@ public class VM {
     public static boolean isBooted() {
         return initLevel >= SYSTEM_BOOTED;
     }
-    
+
     /**
      * Returns {@code true} if the VM has been shutdown
      */
@@ -162,7 +167,7 @@ public class VM {
     public static boolean isShutdown() {
         return initLevel == SYSTEM_SHUTDOWN;
     }
-    
+
     /**
      * Set shutdown state.  Shutdown completes when all registered shutdown
      * hooks have been run.
@@ -173,7 +178,7 @@ public class VM {
     public static void shutdown() {
         initLevel(SYSTEM_SHUTDOWN);
     }
-    
+
     /**
      * Returns the maximum amount of allocatable direct buffer memory.
      * The directMemory variable is initialized during system initialization in the saveAndRemoveProperties method.
@@ -182,7 +187,7 @@ public class VM {
     public static long maxDirectMemory() {
         return directMemory;
     }
-    
+
     /**
      * Returns {@code true} if the direct buffers should be page aligned.
      * This variable is initialized by saveAndRemoveProperties.
@@ -191,7 +196,7 @@ public class VM {
     public static boolean isDirectMemoryPageAligned() {
         return pageAlignDirectMemory;
     }
-    
+
     /**
      * Returns true if the given class loader is the bootstrap class loader or the platform class loader.
      */
@@ -199,7 +204,7 @@ public class VM {
     public static boolean isSystemDomainLoader(ClassLoader loader) {
         return loader == null || loader == ClassLoader.getPlatformClassLoader();
     }
-    
+
     /**
      * Returns the system property of the specified key saved at
      * system initialization time.  This method should only be used
@@ -213,10 +218,10 @@ public class VM {
         if(savedProps == null) {
             throw new IllegalStateException("Not yet initialized");
         }
-        
+
         return savedProps.get(key);
     }
-    
+
     /**
      * Gets an unmodifiable view of the system properties saved at system
      * initialization time. This method should only be used
@@ -230,10 +235,10 @@ public class VM {
         if(savedProps == null) {
             throw new IllegalStateException("Not yet initialized");
         }
-        
+
         return savedProps;
     }
-    
+
     /**
      * Save a private copy of the system properties and remove the system properties that are not intended for public access.
      * This method can only be invoked during system initialization.
@@ -243,16 +248,16 @@ public class VM {
         if(initLevel() != 0) {
             throw new IllegalStateException("Wrong init level");
         }
-        
+
         @SuppressWarnings({"unchecked"})
         Map<String, String> sp = Map.ofEntries(props.entrySet().toArray(new Map.Entry[0]));
-        
+
         /*
          * only main thread is running at this time,
          * so savedProps and its content will be correctly published to threads started later
          */
         savedProps = sp;
-        
+
         /*
          * Set the maximum amount of direct memory.  This value is controlled
          * by the vm option -XX:MaxDirectMemorySize=<size>.
@@ -261,7 +266,7 @@ public class VM {
          * The system property will be removed.
          */
         String s = (String) props.remove("sun.nio.MaxDirectMemorySize");
-        
+
         // 如果成功移除(说明之前已经有该参数)
         if(s != null) {
             // 如果之前为给出-XX:MaxDirectMemorySize，这里为其设置默认值
@@ -275,23 +280,23 @@ public class VM {
                 }
             }
         }
-        
+
         // Check if direct buffers should be page aligned
         s = (String) props.remove("sun.nio.PageAlignDirectMemory");
         if("true".equals(s)) {
             pageAlignDirectMemory = true;
         }
-        
+
         // Remove other private system properties used by java.lang.Integer.IntegerCache
         props.remove("java.lang.Integer.IntegerCache.high");
-        
+
         // used by sun.launcher.LauncherHelper
         props.remove("sun.java.launcher.diag");
-        
+
         // used by jdk.internal.loader.ClassLoaders
         props.remove("jdk.boot.class.path.append");
     }
-    
+
     /**
      * Initialize any miscellaneous operating system settings that need to be set for the class libraries.
      */
@@ -301,7 +306,7 @@ public class VM {
             OSEnvironment.initialize();
         }
     }
-    
+
     /**
      * Gets the number of objects pending for finalization.
      *
@@ -311,7 +316,7 @@ public class VM {
     public static int getFinalRefCount() {
         return finalRefCount;
     }
-    
+
     /**
      * Gets the peak number of objects pending for finalization.
      *
@@ -321,7 +326,7 @@ public class VM {
     public static int getPeakFinalRefCount() {
         return peakFinalRefCount;
     }
-    
+
     /**
      * Add {@code n} to the objects pending for finalization count.
      *
@@ -331,12 +336,12 @@ public class VM {
     public static void addFinalRefCount(int n) {
         // The caller must hold lock to synchronize the update.
         finalRefCount += n;
-        
+
         if(finalRefCount>peakFinalRefCount) {
             peakFinalRefCount = finalRefCount;
         }
     }
-    
+
     /**
      * Returns Thread.State for the given threadStatus
      */
@@ -358,7 +363,7 @@ public class VM {
             return RUNNABLE;
         }
     }
-    
+
     /**
      * Get a nanosecond time stamp adjustment in the form of a single long.
      *
@@ -400,7 +405,7 @@ public class VM {
      * 参见：System.currentTimeMillis();
      */
     public static native long getNanoTimeAdjustment(long offsetInSeconds);
-    
+
     /**
      * Returns the VM arguments for this runtime environment.
      *
@@ -412,7 +417,7 @@ public class VM {
      * If VM options file is specified via -XX:VMOptionsFile, the vm options file is read and expanded in place of -XX:VMOptionFile option.
      */
     public static native String[] getRuntimeArguments();
-    
+
     /**
      * Returns the first user-defined class loader up the execution stack,
      * or the platform class loader if only code from the platform or bootstrap class loader is on the stack.
@@ -421,7 +426,7 @@ public class VM {
         ClassLoader loader = latestUserDefinedLoader0();
         return loader != null ? loader : ClassLoader.getPlatformClassLoader();
     }
-    
+
     /**
      * Returns {@code true} if we are in a set UID program.
      */
@@ -432,28 +437,28 @@ public class VM {
         long egid = getegid();
         return uid != euid || gid != egid;
     }
-    
+
     /**
      * Returns the real user ID of the calling process, or -1 if the value is not available.
      */
     public static native long getuid();
-    
+
     /**
      * Returns the effective user ID of the calling process, or -1 if the value is not available.
      */
     public static native long geteuid();
-    
+
     /**
      * Returns the real group ID of the calling process, or -1 if the value is not available.
      */
     public static native long getgid();
-    
+
     /**
      * Returns the effective group ID of the calling process, or -1 if the value is not available.
      */
     public static native long getegid();
-    
-    
+
+
     /*
      * Returns the first user-defined class loader up the execution stack,
      * or null if only code from the platform or bootstrap class loader is
@@ -464,7 +469,7 @@ public class VM {
      * remove the logic in the VM.
      */
     private static native ClassLoader latestUserDefinedLoader0();
-    
+
     private static native void initialize();
-    
+
 }

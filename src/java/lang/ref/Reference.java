@@ -151,12 +151,12 @@ import jdk.internal.vm.annotation.ForceInline;
  * 那么如果没有及时释放这些引用，还是可能发生内存泄露的
  */
 public abstract class Reference<T> {
-    
+
     private static final Object processPendingLock = new Object();
-    
+
     // 判断“报废Reference”处理线程是否正在工作
     private static boolean processPendingActive = false;
-    
+
     /* The queue this reference gets enqueued to by GC notification or by calling enqueue().
      *
      * When registered: the queue with which this reference is registered.
@@ -164,8 +164,16 @@ public abstract class Reference<T> {
      *        dequeued: ReferenceQueue.NULL
      *    unregistered: ReferenceQueue.NULL
      */
+     /*此引用通过GC通知或调用enqueue（）进入队列的队列。
+     *
+     *注册时：注册此引用的队列。
+     *enqueued:ReferenceQueue.ENQUEUE（排队）
+     *退出队列：ReferenceQueue.NULL
+     *未注册：ReferenceQueue.NULL
+     */
+    //这个队列只是提供操作"Reference"单向链表的操作。
     volatile ReferenceQueue<? super T> queue;   // "报废引用"队列，当前引用被垃圾回收之后会存于此；多个引用可以共享一个引用队列
-    
+
     /* The link in a ReferenceQueue's list of Reference objects.
      *
      * When registered: null
@@ -174,14 +182,15 @@ public abstract class Reference<T> {
      *    unregistered: null
      */
     @SuppressWarnings("rawtypes")
+    //单向链表形成一个"报废引用"队列，后加节点连接在头部。
     volatile Reference next;
-    
+
     /*
      * 由Reference追踪的目标对象
      * 只有该对象被GC特别对待，子类中的其他对象不会被追踪
      */
     private T target;         /* Treated specially by GC */
-    
+
     /*
      * Used by the garbage collector to accumulate Reference objects that need to be revisited in order to decide whether they should be notified.
      * Also used as the link in the pending-Reference list.
@@ -191,46 +200,58 @@ public abstract class Reference<T> {
      * When active: null or next element in a discovered reference list maintained by the GC (or this if last)
      *     pending: next element in the pending-Reference list (null if last)
      *    inactive: null
+     *
+     * 垃圾回收器用来收集需要重新访问的Reference对象，以决定是否应该通知它们。
+     * 也用作待定参考列表中的链接。
+     * 发现的字段和下一个字段是不同的，以允许将enqueue()方法应用于Reference对象
+     * 而它要么在挂起的引用列表中，要么在垃圾收集器的发现集中。
+     *
+     * 激活时：GC维护的已发现引用列表中的null或下一个元素（或this if last）
+     * pending：pending Reference列表中的下一个元素（如果是最后一个，则为null）
+     * 非活动：空
      */
+    // transient关键字的主要作用就是让某些被transient关键字修饰的成员属性变量不被序列化。
     private transient Reference<T> discovered;  // 由虚拟机设置的"报废引用"列表，什么类型的引用都有
-    
-    
+
+
     // 在根线程组启动一个名为Reference Handler的守护线程来处理被回收掉的引用
     static {
         // 获取当前线程所在的线程组
         ThreadGroup tg = Thread.currentThread().getThreadGroup();
-    
+
         // 顺着当前线程组往上遍历，找到根线程组system
         ThreadGroup tgn = tg;
         while(tgn != null) {
             tg = tgn;
             tgn = tg.getParent();
         }
-    
+
         // 构造名称为"Reference Handler"的线程
+        // 可以通过 jstack <进程编号> 查看进程下的全部线程。
         Thread handler = new ReferenceHandler(tg, "Reference Handler");
-    
+
         /* If there were a special system-only priority greater than MAX_PRIORITY, it would be used here */
         // 设置为最高优先级的守护线程
         handler.setPriority(Thread.MAX_PRIORITY);
         handler.setDaemon(true);
         handler.start();
-        
+
         // provide access in SharedSecrets
+        // 在SharedSecrets中提供访问权限
         SharedSecrets.setJavaLangRefAccess(new JavaLangRefAccess() {
             @Override
             public boolean waitForReferenceProcessing() throws InterruptedException {
                 return Reference.waitForReferenceProcessing();
             }
-            
+
             @Override
             public void runFinalization() {
                 Finalizer.runFinalization();
             }
         });
     }
-    
-    
+
+
     /**
      * High-priority thread to enqueue pending References
      */
@@ -240,16 +261,16 @@ public abstract class Reference<T> {
      * 注：站在报废引用队列的角度观察，该线程可以被视为是生产者，不断向报废引用队列填充已经报废的引用以待后续处理
      */
     private static class ReferenceHandler extends Thread {
-        
+
         static {
             // pre-load and initialize Cleaner class so that we don't get into trouble later in the run loop if there's memory shortage while loading/initializing it lazily.
             ensureClassInitialized(Cleaner.class);  // 确保jdk.internal.ref.Cleaner已经初始化
         }
-        
+
         ReferenceHandler(ThreadGroup g, String name) {
             super(g, null, name, 0, false);
         }
-        
+
         // 确保指定的类已经初始化
         private static void ensureClassInitialized(Class<?> clazz) {
             try {
@@ -258,7 +279,7 @@ public abstract class Reference<T> {
                 throw (Error) new NoClassDefFoundError(e.getMessage()).initCause(e);
             }
         }
-        
+
         // 常驻后台运行
         public void run() {
             // 死循环
@@ -268,20 +289,21 @@ public abstract class Reference<T> {
             }
         }
     }
-    
+
     /**
      * Wait until the VM's pending-Reference list may be non-null.
      */
     // 等待，直到到VM的pending-Reference列表可能为非null。
     private static native void waitForReferencePendingList();
-    
+
     /**
      * Atomically get and clear (set to null) the VM's pending-Reference list.
      */
     // 以原子方式获取并清除（设置为null）VM的pending-Reference列表。
     private static native Reference<Object> getAndClearReferencePendingList();
-    
-    // 被“报废Reference”处理线程不断执行，从JVM获取那些报废的Reference，并将其加入相应的ReferenceQueue
+
+    // 被“报废Reference”处理线程不断执行，从JVM获取那些报废的Reference，并将其加入相应的ReferenceQueue，
+    // 且只有一个守护线程去处理。
     private static void processPendingReferences() {
         /*
          * Only the singleton reference processing thread calls waitForReferencePendingList() and getAndClearReferencePendingList().
@@ -289,25 +311,28 @@ public abstract class Reference<T> {
          */
         // 陷入等待，直到“报废Reference”列表非null时被虚拟机唤醒
         waitForReferencePendingList();
-        
+
         Reference<Object> pendingList;
-        
+
+        //todo 为啥只有一个 线程处理，这里还需要使用同步方式？？？
         synchronized(processPendingLock) {
             // 获取一个清单，该清单里列出了刚刚被回收的引用（“报废Reference”）
+            // 这是一个 native 方法，由VM执行。GC 回收对象之后，这里就可以
+            // 获取到被回收的对象引用。
             pendingList = getAndClearReferencePendingList();
             processPendingActive = true;
         }
-        
+
         while(pendingList != null) {
             Reference<Object> ref = pendingList;
             pendingList = ref.discovered;
             ref.discovered = null;
-    
+
             // 如果是特殊的虚引用：Cleaner，则需要执行该清理器的清理方法
             if(ref instanceof Cleaner) {
                 // 对清理器追踪对象进行清理
                 ((Cleaner) ref).clean();
-    
+
                 /*
                  * Notify any waiters that progress has been made.
                  * This improves latency for nio.Bits waiters, which are the only important ones.
@@ -323,26 +348,26 @@ public abstract class Reference<T> {
                 }
             }
         }
-    
+
         // Notify any waiters of completion of current round.
         synchronized(processPendingLock) {
             processPendingActive = false;
             processPendingLock.notifyAll();
         }
     }
-    
-    
+
+
     // 没有关联ReferenceQueue，意味着用户只需要特殊的引用类型，不关心对象何时被GC
     Reference(T target) {
         this(target, null);
     }
-    
+
     // 传入自定义引用referent和ReferenceQueue，当reference被回收后，会添加到queue中
     Reference(T target, ReferenceQueue<? super T> queue) {
         this.target = target;
         this.queue = (queue == null) ? ReferenceQueue.NULL : queue;
     }
-    
+
     /**
      * Returns this reference object's referent.
      * If this reference object has been cleared, either by the program or by the garbage collector, then this method returns <code>null</code>.
@@ -354,7 +379,7 @@ public abstract class Reference<T> {
     public T get() {
         return this.target;
     }
-    
+
     /**
      * Clears this reference object.
      * Invoking this method will not cause this object to be enqueued.
@@ -365,7 +390,7 @@ public abstract class Reference<T> {
     public void clear() {
         this.target = null;
     }
-    
+
     /**
      * Tells whether or not this reference object has been enqueued, either by the program or by the garbage collector.
      * If this reference object was not registered with a queue when it was created, then this method will always return <code>false</code>.
@@ -373,10 +398,11 @@ public abstract class Reference<T> {
      * @return <code>true</code> if and only if this reference object has been enqueued
      */
     // 判断当前Reference是否在ReferenceQueue中
+    // 若是当reference被回收后，会添加到queue中。
     public boolean isEnqueued() {
         return (this.queue == ReferenceQueue.ENQUEUED);
     }
-    
+
     /**
      * Clears this reference object and adds it to the queue with which it is registered, if any.
      *
@@ -390,7 +416,7 @@ public abstract class Reference<T> {
         this.target = null;
         return this.queue.enqueue(this);
     }
-    
+
     /**
      * Ensures that the object referenced by the given reference remains
      * <a href="package-summary.html#reachability"><em>strongly reachable</em></a>,
@@ -506,14 +532,19 @@ public abstract class Reference<T> {
         // HotSpot JVM, when this fence is used in a wide variety of situations.
         // HotSpot JVM retains the ref and does not GC it before a call to
         // this method, because the JIT-compilers do not have GC-only safepoints.
+        //什么也不做。此方法用@ForceInline注释以消除
+        //使用@DontInline会导致的大部分开销
+        //HotSpot JVM，当此围栏用于多种情况时。
+        //HotSpot JVM保留ref，在调用
+        //这种方法，因为JIT编译器没有仅包含GC的安全点。
     }
-    
+
     /**
      * Test whether the VM's pending-Reference list contains any entries.
      */
-    // 判断虚拟机的pending-Reference中是否包含更多"报废引用"
+    // 判断虚拟机的pending-Reference(待定引用)中是否包含更多"报废引用"
     private static native boolean hasReferencePendingList();
-    
+
     /**
      * Wait for progress in reference processing.
      * Returns true after waiting
@@ -540,7 +571,7 @@ public abstract class Reference<T> {
             }
         }
     }
-    
+
     /**
      * Throws {@link CloneNotSupportedException}. A {@code Reference} cannot be
      * meaningfully cloned. Construct a new {@code Reference} instead.
@@ -553,5 +584,5 @@ public abstract class Reference<T> {
     protected Object clone() throws CloneNotSupportedException {
         throw new CloneNotSupportedException();
     }
-    
+
 }

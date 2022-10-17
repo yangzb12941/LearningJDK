@@ -301,7 +301,7 @@ import static java.lang.module.ModuleDescriptor.Modifier.SYNTHETIC;
  * }
  *
  * 实现回调引用：
- * public class SubjectHandler interface InvocationHandler {
+ * public class SubjectHandler implements InvocationHandler {
  *     private Subject target;   // 被代理对象
  *
  *     public SubjectHandler(Subject target) {
@@ -321,7 +321,7 @@ import static java.lang.module.ModuleDescriptor.Modifier.SYNTHETIC;
  * }
  *
  * 或者，将以上两步合并（不推荐）
- * public class SubjectImpl interface Subject, InvocationHandler {
+ * public class SubjectImpl implements Subject, InvocationHandler {
  *     private Subject target;   // 被代理对象
  *
  *     public SubjectHandler(Subject target) {
@@ -369,39 +369,39 @@ import static java.lang.module.ModuleDescriptor.Modifier.SYNTHETIC;
  */
 public class Proxy implements Serializable {
     private static final long serialVersionUID = -2222568056686623797L;
-    
+
     /**
      * the invocation handler for this proxy instance.
      *
      * @serial
      */
     protected InvocationHandler h;  // 回调引用，在代理方法中通过此回调引用来间接调用被代理方法
-    
+
     /** parameter types of a proxy class constructor */
     // 代理类构造器参数(固定)
     private static final Class<?>[] constructorParams = {InvocationHandler.class};
-    
+
     /**
      * a cache of proxy constructors with {@link Constructor#setAccessible(boolean) accessible} flag already set
      */
     // root-clv，此处主要用来构造sub-clv
     private static final ClassLoaderValue<Constructor<?>> proxyCache = new ClassLoaderValue<>();
-    
+
     private static final Class<?>[] EMPTY_CLASS_ARRAY = new Class<?>[0];
-    
+
     // 代理接口都是public时，代理类需要统一使用该包名
     private static final String PROXY_PACKAGE_PREFIX = ReflectUtil.PROXY_PACKAGE;
-    
-    
-    
+
+
+
     /*▼ 构造器 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Prohibits instantiation.
      */
     private Proxy() {
     }
-    
+
     /**
      * Constructs a new {@code Proxy} instance from a subclass
      * (typically, a dynamic proxy class) with the specified value
@@ -417,13 +417,13 @@ public class Proxy implements Serializable {
         Objects.requireNonNull(h);
         this.h = h;
     }
-    
+
     /*▲ 构造器 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 工厂方法 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns a proxy instance for the specified interfaces
      * that dispatches method invocations to the specified invocation
@@ -529,21 +529,21 @@ public class Proxy implements Serializable {
     @CallerSensitive
     public static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces, InvocationHandler h) {
         Objects.requireNonNull(h);
-    
+
         // 如果存在安全管理器，返回newProxyInstance()方法的调用者所处的类
         final Class<?> caller = System.getSecurityManager() == null ? null : Reflection.getCallerClass();
-    
+
         /* Look up or generate the designated proxy class and its constructor. */
         // 获取代理类的专用构造器：该构造器的形参必须为InvocationHandler类型
         Constructor<?> cons = getProxyConstructor(caller, loader, interfaces);
-    
+
         // 生成动态代理对象并返回
         return newProxyInstance(caller, cons, h);
     }
-    
+
     /*▲ 工厂方法 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
+
+
     /**
      * Returns the invocation handler for the specified proxy instance.
      *
@@ -568,29 +568,29 @@ public class Proxy implements Serializable {
         if(!isProxyClass(proxy.getClass())) {
             throw new IllegalArgumentException("not a proxy instance");
         }
-        
+
         final InvocationHandler ih = ((Proxy) proxy).h;
-        
+
         // 如果不存在安全管理器，直接返回
         if(System.getSecurityManager() == null) {
             return ih;
         }
-        
+
         // 获取getInvocationHandler()的调用者所在的类
         Class<?> caller = Reflection.getCallerClass();
-        
+
         // 获取代理类
         Class<?> ihClass = ih.getClass();
-        
+
         // 判断在caller访问ihClass时，是否需要检查包访问权限
         if(ReflectUtil.needsPackageAccessCheck(caller.getClassLoader(), ihClass.getClassLoader())) {
             // 检查当前线程对ihClass所在的包的访问权限
             ReflectUtil.checkPackageAccess(ihClass);
         }
-        
+
         return ih;
     }
-    
+
     /**
      * Returns true if the given class is a proxy class.
      *
@@ -611,7 +611,7 @@ public class Proxy implements Serializable {
         return Proxy.class.isAssignableFrom(proxyClass) // 要求proxyClass是Proxy类型
             && ProxyBuilder.isProxyClass(proxyClass);   // 要求proxyClass位于相应类加载器的代理类缓存中
     }
-    
+
     /**
      * Returns the {@code java.lang.Class} object for a proxy class
      * given a class loader and an array of interfaces.  The proxy class
@@ -665,14 +665,14 @@ public class Proxy implements Serializable {
     @CallerSensitive
     public static Class<?> getProxyClass(ClassLoader loader, Class<?>... interfaces) throws IllegalArgumentException {
         Class<?> caller = System.getSecurityManager() == null ? null : Reflection.getCallerClass();
-    
+
         // 返回代理类的专用构造器：该构造器的形参必须为InvocationHandler类型
         Constructor<?> constructor = getProxyConstructor(caller, loader, interfaces);
-    
+
         return constructor.getDeclaringClass();   // 返回构造器所在的类
     }
-    
-    
+
+
     /**
      * Returns the {@code Constructor} object of a proxy class that takes a
      * single argument of type {@link InvocationHandler}, given a class loader
@@ -694,38 +694,38 @@ public class Proxy implements Serializable {
         // 如果只有一个被代理接口
         if(interfaces.length == 1) {
             Class<?> intf = interfaces[0];
-            
+
             if(caller != null) {
                 // 检查caller对代理接口interfaces的访问权限，以及loader为null时检查getClassLoader权限
                 checkProxyAccess(caller, loader, intf);
             }
-            
+
             // 构造一个包含代理接口的sub-clv
             AbstractClassLoaderValue<ClassLoaderValue<Constructor<?>>, Constructor<?>>.Sub<? extends Class<?>> subCLV = proxyCache.sub(intf);
-            
+
             // 返回subCLV在loader中的类加载器局部缓存中映射的代理类构造器，如果不存在，则计算出新的代理类构造器并缓存起来
             return subCLV.computeIfAbsent(loader, (cl, clv) -> new ProxyBuilder(cl, clv.key()).build());
-            
+
             // 如果存在多个被代理接口
         } else {
             // interfaces cloned
             final Class<?>[] intfsArray = interfaces.clone();
-            
+
             if(caller != null) {
                 // 检查caller对代理接口interfaces的访问权限，以及loader为null时检查getClassLoader权限
                 checkProxyAccess(caller, loader, intfsArray);
             }
-            
+
             final List<Class<?>> intfs = Arrays.asList(intfsArray);
-            
+
             // 构造一个包含代理接口的sub-clv
             AbstractClassLoaderValue<ClassLoaderValue<Constructor<?>>, Constructor<?>>.Sub<List<Class<?>>> subCLV = proxyCache.sub(intfs);
-            
+
             // 返回subCLV在loader中的类加载器局部缓存中映射的代理类构造器，如果不存在，则计算出新的代理类构造器并缓存起来
             return subCLV.computeIfAbsent(loader, (cl, clv) -> new ProxyBuilder(cl, clv.key()).build());
         }
     }
-    
+
     // 生成动态代理对象。如果没有SecurityManager，caller为null
     private static Object newProxyInstance(Class<?> caller, Constructor<?> cons, InvocationHandler h) {
         /*
@@ -736,7 +736,7 @@ public class Proxy implements Serializable {
                 // 判断代理对象所在的类是否可以访问代理类（如果不能访问则无法调用构造器）
                 checkNewProxyPermission(caller, cons.getDeclaringClass());
             }
-            
+
             return cons.newInstance(h);
         } catch(IllegalAccessException | InstantiationException e) {
             throw new InternalError(e.toString(), e);
@@ -749,7 +749,7 @@ public class Proxy implements Serializable {
             }
         }
     }
-    
+
     /**
      * Returns the class loader for the given module.
      */
@@ -758,7 +758,7 @@ public class Proxy implements Serializable {
         PrivilegedAction<ClassLoader> pa = () -> module.getClassLoader();
         return AccessController.doPrivileged(pa);
     }
-    
+
     /**
      * Check permissions required to create a Proxy class.
      *
@@ -783,40 +783,40 @@ public class Proxy implements Serializable {
         if(sm == null) {
             return;
         }
-    
+
         ClassLoader ccl = caller.getClassLoader();
-    
+
         if(loader == null && ccl != null) {
             sm.checkPermission(SecurityConstants.GET_CLASSLOADER_PERMISSION);
         }
-    
+
         // 检查ccl（加载的类）对代理接口interfaces的访问权限
         ReflectUtil.checkProxyPackageAccess(ccl, interfaces);
     }
-    
+
     // 判断caller是否可以访问proxyClass
     private static void checkNewProxyPermission(Class<?> caller, Class<?> proxyClass) {
         SecurityManager sm = System.getSecurityManager();
         if(sm == null) {
             return;
         }
-        
+
         // 判断proxyClass是否为实现了非public代理接口的代理类
         if(ReflectUtil.isNonPublicProxyClass(proxyClass)) {
             ClassLoader ccl = caller.getClassLoader();
             ClassLoader pcl = proxyClass.getClassLoader();
-            
+
             // do permission check if the caller is in a different runtime package of the proxy class
             String callerPkg = caller.getPackageName();
             String pkg = proxyClass.getPackageName();
-            
+
             if(ccl != pcl || !pkg.equals(callerPkg)) {
                 sm.checkPermission(new ReflectPermission("newProxyInPackage." + pkg));
             }
         }
     }
-    
-    
+
+
     /**
      * Builder for a proxy class.
      *
@@ -827,28 +827,28 @@ public class Proxy implements Serializable {
     // 代理类构建器
     private static final class ProxyBuilder {
         private static final String DEBUG = GetPropertyAction.privilegedGetProperty("jdk.proxy.debug", "");
-        
+
         private static final Unsafe UNSAFE = Unsafe.getUnsafe();
-        
+
         private static final AtomicInteger counter = new AtomicInteger();   // 动态代理所在模块/包的名称编号
-        
+
         /* next number to use for generation of unique proxy class names */
         private static final AtomicLong nextUniqueNumber = new AtomicLong();    // 代理类名称编号
-        
+
         // prefix for all proxy class names
         private static final String proxyClassNamePrefix = "$Proxy";    // 动态代理类名称前缀
-        
+
         private final List<Class<?>> interfaces;    // 代理接口
-        
+
         private final Module module;    // 动态代理类所在模块
-        
+
         /*
          * 动态代理模块CLV，由所有代理类构建器对象共享
          *
          * 该CLV映射了一个动态代理模块，这个映射存储在加载该动态代理模块的类加载器的类加载器局部缓存中
          */
         private static final ClassLoaderValue<Module> dynProxyModulesCLV = new ClassLoaderValue<>();
-        
+
         /*
          * 代理类CLV的root-clv，由所有代理类构建器对象共享
          *
@@ -856,38 +856,38 @@ public class Proxy implements Serializable {
          * 而对于sub-clv作为类加载器局部缓存的key这个功能来说，sub-clv只是简单地映射了一个Boolean.TRUE值。
          */
         private static final ClassLoaderValue<Boolean> reverseProxyCacheCLV = new ClassLoaderValue<>(); // a reverse cache of defined proxy classes
-        
+
         ProxyBuilder(ClassLoader loader, Class<?> intf) {
             this(loader, Collections.singletonList(intf));
         }
-        
+
         ProxyBuilder(ClassLoader loader, List<Class<?>> interfaces) {
             // 确保模块化系统已经初始化完成
             if(!VM.isModuleSystemInited()) {
                 throw new InternalError("Proxy is not supported until module system is fully initialized");
             }
-            
+
             // 代理接口数量不能超过65535
             if(interfaces.size()>65535) {
                 throw new IllegalArgumentException("interface limit exceeded: " + interfaces.size());
             }
-            
+
             // 获取所有代理接口中所有非静态目标方法需要用到类型
             Set<Class<?>> refTypes = referencedTypes(loader, interfaces);
-            
+
             /* IAE if violates any restrictions specified in newProxyInstance */
             // 确保类加载器loader可以完成对代理类的加载
             validateProxyInterfaces(loader, interfaces, refTypes);
-            
+
             // 代理接口
             this.interfaces = interfaces;
-            
+
             // (构造并)返回动态代理类所在模块
             this.module = mapToModule(loader, interfaces, refTypes);
-            
+
             assert getLoader(module) == loader;
         }
-        
+
         /**
          * Generate a proxy class and return its proxy Constructor with
          * accessible flag already set. If the target module does not have access
@@ -901,7 +901,7 @@ public class Proxy implements Serializable {
         Constructor<?> build() {
             // 生成代理类的类对象；module是代理类所在模块，interfaces是代理接口
             Class<?> proxyClass = defineProxyClass(module, interfaces);
-            
+
             final Constructor<?> cons;
             try {
                 // 获取代理类的构造器，该方法的形参必须为InvocationHandler类型
@@ -909,7 +909,7 @@ public class Proxy implements Serializable {
             } catch(NoSuchMethodException e) {
                 throw new InternalError(e.toString(), e);
             }
-            
+
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     // 设置可访问性
@@ -917,19 +917,19 @@ public class Proxy implements Serializable {
                     return null;
                 }
             });
-    
+
             return cons;
         }
-        
+
         // 生成代理类的类对象；module是代理类所在模块，interfaces是代理接口
         private static Class<?> defineProxyClass(Module module, List<Class<?>> interfaces) {
-            
+
             // 代理类所在的包
             String proxyPkg = null;     // package to define proxy class in
-            
+
             // 代理类访问接口
             int accessFlags = Modifier.PUBLIC | Modifier.FINAL;
-            
+
             /*
              * Record the package of a non-public proxy interface so that the
              * proxy class will be defined in the same package.  Verify that
@@ -939,15 +939,15 @@ public class Proxy implements Serializable {
             for(Class<?> intf : interfaces) {
                 // 获取代理接口修饰符
                 int flags = intf.getModifiers();
-                
+
                 // 如果存在非public代理接口
                 if(!Modifier.isPublic(flags)) {
                     // 代理类仅需要添加final修饰符
                     accessFlags = Modifier.FINAL;  // non-public, final
-    
+
                     // 代理接口所在的包
                     String pkg = intf.getPackageName();
-    
+
                     // 如果当前代理接口是非public的，则代理类所在的包应当与代理接口所在的包一致
                     if(proxyPkg == null) {
                         proxyPkg = pkg;
@@ -956,7 +956,7 @@ public class Proxy implements Serializable {
                     }
                 }
             }
-            
+
             // proxyPkg为null意味着代理接口都是是public的，此时使用统一的包名："com.sun.proxy"
             if(proxyPkg == null) {
                 // all proxy interfaces are public
@@ -965,7 +965,7 @@ public class Proxy implements Serializable {
             } else if(proxyPkg.isEmpty() && module.isNamed()) {
                 throw new IllegalArgumentException("Unnamed package cannot be added to " + module);
             }
-            
+
             // 如果代理类所在模块是命名模块
             if(module.isNamed()) {
                 // 需要确保代理类所在的包在该命名模块下辖的包中
@@ -973,7 +973,7 @@ public class Proxy implements Serializable {
                     throw new InternalError(proxyPkg + " not exist in " + module.getName());
                 }
             }
-            
+
             /*
              * Choose a name for the proxy class to generate.
              */
@@ -981,25 +981,25 @@ public class Proxy implements Serializable {
             long num = nextUniqueNumber.getAndIncrement();
             String proxyName = proxyPkg.isEmpty() ? proxyClassNamePrefix + num    // 形如"$Proxy0"
                 : proxyPkg + "." + proxyClassNamePrefix + num;
-            
+
             // 获取加载指定模块的类加载器
             ClassLoader loader = getLoader(module);
             trace(proxyName, module, loader, interfaces);
-            
+
             /* Generate the specified proxy class. */
             // 动态生成代理类的字节码流
             byte[] proxyClassFile = ProxyGenerator.generateProxyClass(proxyName, interfaces.toArray(EMPTY_CLASS_ARRAY), accessFlags);
-            
+
             try {
                 // 生成代理类的类对象
                 Class<?> proxyClass = UNSAFE.defineClass(proxyName, proxyClassFile, 0, proxyClassFile.length, loader, null);
-                
+
                 // 构造一个包含指定代理类的类对象的sub-clv
                 AbstractClassLoaderValue<ClassLoaderValue<Boolean>, Boolean>.Sub<? extends Class<?>> subCLV = reverseProxyCacheCLV.sub(proxyClass);
-                
+
                 // 向loader的类加载器局部缓存中存入一个subCLV对象到Boolean.TRUE的映射，并返回旧(目标)值，不允许覆盖
                 subCLV.putIfAbsent(loader, Boolean.TRUE);
-                
+
                 // 返回生成的代理类对象
                 return proxyClass;
             } catch(ClassFormatError e) {
@@ -1010,7 +1010,7 @@ public class Proxy implements Serializable {
                 throw new IllegalArgumentException(e.toString());
             }
         }
-        
+
         /**
          * Test if given class is a class defined by {@link #defineProxyClass(Module, List)}
          */
@@ -1018,17 +1018,17 @@ public class Proxy implements Serializable {
         static boolean isProxyClass(Class<?> proxyClass) {
             // 获取加载该代理类的类加载器
             ClassLoader loader = proxyClass.getClassLoader();
-            
+
             // 构造一个包含指定代理类的类对象的sub-clv
             AbstractClassLoaderValue<ClassLoaderValue<Boolean>, Boolean>.Sub<? extends Class<?>> sub = reverseProxyCacheCLV.sub(proxyClass);
-            
+
             // 从loader的类加载器局部缓存中提取当前对象映射的值
             Boolean value = sub.get(loader);
-            
+
             // 判断该映射是否存在
             return Objects.equals(value, Boolean.TRUE);
         }
-        
+
         /**
          * Validate the given proxy interfaces and the given referenced types
          * are visible to the defining loader.
@@ -1039,7 +1039,7 @@ public class Proxy implements Serializable {
         // 确保类加载器loader可以完成对代理类的加载
         private static void validateProxyInterfaces(ClassLoader loader, List<Class<?>> interfaces, Set<Class<?>> refTypes) {
             Map<Class<?>, Boolean> interfaceSet = new IdentityHashMap<>(interfaces.size());
-            
+
             // 遍历所有代理接口
             for(Class<?> intf : interfaces) {
                 /*
@@ -1047,7 +1047,7 @@ public class Proxy implements Serializable {
                  */
                 // 确保类加载器loader可以加载到代理接口intf
                 ensureVisible(loader, intf);
-                
+
                 /*
                  * Verify that the Class object actually represents an interface.
                  */
@@ -1055,7 +1055,7 @@ public class Proxy implements Serializable {
                 if(!intf.isInterface()) {
                     throw new IllegalArgumentException(intf.getName() + " is not an interface");
                 }
-                
+
                 /*
                  * Verify that this interface is not a duplicate.
                  */
@@ -1064,21 +1064,21 @@ public class Proxy implements Serializable {
                     throw new IllegalArgumentException("repeated interface: " + intf.getName());
                 }
             }
-    
+
             // 遍历所有将来用到的类型
             for(Class<?> type : refTypes) {
                 // 确保类加载器loader可以加载到所有将来用到的类型
                 ensureVisible(loader, type);
             }
         }
-        
+
         /*
          * Returns all types referenced by all public non-static method signatures of the proxy interfaces
          */
         // 返回所有代理接口中所有非静态目标方法需要用到类型，包括方法的返回值类型、形参类型以及异常类型（排除原始类型）
         private static Set<Class<?>> referencedTypes(ClassLoader loader, List<Class<?>> interfaces) {
             HashSet<Class<?>> types = new HashSet<>();
-    
+
             // 遍历代理接口
             for(Class<?> intf : interfaces) {
                 // 遍历代理接口中的所有目标方法(包括其父接口中的非静态方法)
@@ -1087,32 +1087,32 @@ public class Proxy implements Serializable {
                     if(Modifier.isStatic(method.getModifiers())) {
                         continue;
                     }
-            
+
                     // 向types中存入目标方法的返回值类型
                     addElementType(types, method.getReturnType());
-            
+
                     // 向types中存入目标方法的形参类型
                     addElementTypes(types, method.getSharedParameterTypes());
-            
+
                     // 向types中存入目标方法抛出的异常类型
                     addElementTypes(types, method.getSharedExceptionTypes());
                 }
             }
-    
+
             return types;
         }
-        
+
         // 将非原始类型的类对象存入Set
         private static void addElementType(HashSet<Class<?>> types, Class<?> cls) {
             // 获取类对象的类型(对于数组类，获取其最外层的组件类型)
             var type = getElementType(cls);
-    
+
             // 排除原始类型
             if(!type.isPrimitive()) {
                 types.add(type);
             }
         }
-        
+
         // 将非原始类型的类对象批量存入Set
         private static void addElementTypes(HashSet<Class<?>> types, Class<?>... classes) {
             // 遍历可变参数列表内所有类对象
@@ -1121,19 +1121,19 @@ public class Proxy implements Serializable {
                 addElementType(types, cls);
             }
         }
-        
+
         // 获取类对象的类型，对于数组类型，返回其最外层的类型，如对于int[][]返回int
         private static Class<?> getElementType(Class<?> type) {
             Class<?> e = type;
-    
+
             while(e.isArray()) {
                 // 获取数组的组件类型
                 e = e.getComponentType();
             }
-    
+
             return e;
         }
-        
+
         /**
          * Returns the module that the generated proxy class belongs to.
          *
@@ -1158,31 +1158,31 @@ public class Proxy implements Serializable {
         private static Module mapToModule(ClassLoader loader, List<Class<?>> interfaces, Set<Class<?>> refTypes) {
             // 记录没有被完全导出(exports)的public代理接口到其所在模块的映射
             Map<Class<?>, Module> modulePrivateTypes = new HashMap<>();
-    
+
             // 记录非public代理接口到其所在模块的映射
             Map<Class<?>, Module> packagePrivateTypes = new HashMap<>();
-    
+
             // 遍历代理接口
             for(Class<?> intf : interfaces) {
                 // 获取该接口所在的模块
                 Module module = intf.getModule();
-        
+
                 // 处理public代理接口
                 if(Modifier.isPublic(intf.getModifiers())) {
                     // 代理接口所在的包
                     String pn = intf.getPackageName();
-            
+
                     // 如果模块module没有将pn包导出(exports)给了所有模块(即该public代理接口没有被完全导出)
                     if(!module.isExported(pn)) {
                         modulePrivateTypes.put(intf, module);
                     }
-            
+
                     // 处理非public代理接口
                 } else {
                     packagePrivateTypes.put(intf, module);
                 }
             }
-    
+
             /*
              * all proxy interfaces are public and exported, the proxy class is in unnamed module.
              * Such proxy class is accessible to any unnamed module and named module that can read unnamed module
@@ -1191,7 +1191,7 @@ public class Proxy implements Serializable {
             if(packagePrivateTypes.isEmpty() && modulePrivateTypes.isEmpty()) {
                 return loader != null ? loader.getUnnamedModule() : BootLoader.getUnnamedModule();
             }
-    
+
             // 如果存在非public代理接口
             if(packagePrivateTypes.size()>0) {
                 /*
@@ -1208,11 +1208,11 @@ public class Proxy implements Serializable {
                         throw new IllegalArgumentException("non-public interfaces from different packages");
                     }
                 }
-        
+
                 /* all package-private types are in the same module (named or unnamed) */
                 // 非public代理接口所在的模块
                 Module target = null;
-        
+
                 // 遍历非public代理接口所在的模块(至此，只应该有一个模块)
                 for(Module module : packagePrivateTypes.values()) {
                     // 确保这些模块的类加载器就是给定的类加载器
@@ -1220,103 +1220,103 @@ public class Proxy implements Serializable {
                         // the specified loader is not the same class loader of the non-public interface
                         throw new IllegalArgumentException("non-public interface is not defined by the given loader");
                     }
-            
+
                     target = module;
                 }
-        
+
                 /* validate if the target module can access all other interfaces */
                 // 遍历代理接口
                 for(Class<?> intf : interfaces) {
                     // 获取代理接口所在模块
                     Module module = intf.getModule();
-            
+
                     // 如果遇到非public代理接口，直接略过，因为上面已经判断过了
                     if(module == target) {
                         continue;
                     }
-            
+
                     // 代理接口所在包
                     String pn = intf.getPackageName();
-            
+
                     // 遇到public接口
                     if(target.canRead(module) // 确保public代理接口所在模块依赖(requires)非public代理接口所在模块，因为将来会把代理类放在非public代理接口所在模块下
                         && module.isExported(pn, target)) { // 确保public接口所在模块将pn包导出(exports)给了非public代理接口所在模块，不然将来位于非public接口中的代理类无法访问public代理接口
                         continue;
                     }
-            
+
                     throw new IllegalArgumentException(target + " can't access " + intf.getName());
                 }
-        
+
                 /* return the module of the package-private interface */
                 // 使用非public接口所在模块作为代理类的存放模块
                 return target;
             }
-    
+
             /* 至此，说明所有代理接口都是public的 */
-    
+
             /*
              * All proxy interfaces are public and at least one in a non-exported package.
              * So maps to a dynamic proxy module and add reads edge and qualified exports, if necessary
              */
             // 如果代理接口都是public的，则它们可能位于各个不同的模块，此时需要动态构造一个命名模块，以存放将来生成的代理类
             Module target = getDynamicModule(loader);
-    
+
             /* set up proxy class access to proxy interfaces and types referenced in the method signature */
             // 代理类中用到的所有接口/类
             Set<Class<?>> types = new HashSet<>(interfaces);
             types.addAll(refTypes);
-    
+
             // 确保动态代理类所在模块target可以访问到代理类中出现的所有接口/类
             for(Class<?> c : types) {
                 ensureAccess(target, c);
             }
-    
+
             // 返回动态代理所在的模块
             return target;
         }
-        
+
         /*
          * Ensure the given module can access the given class.
          */
         // 确保模块target可以访问到目标类c所在模块
         private static void ensureAccess(Module target, Class<?> c) {
-    
+
             // 获取c所在的模块
             Module module = c.getModule();
-    
+
             /* add read edge and qualified export for the target module to access */
             // 确保模块target依赖(requires)模块module
             if(!target.canRead(module)) {
                 Modules.addReads(target, module);
             }
-    
+
             // 获取c所在的包
             String pn = c.getPackageName();
-    
+
             // 确保模块module将pn包导出(exports)给了模块target
             if(!module.isExported(pn, target)) {
                 Modules.addExports(module, pn, target);
             }
         }
-        
+
         /*
          * Ensure the given class is visible to the class loader.
          */
         // 确保类加载器cl可以加载到目标类/接口target
         private static void ensureVisible(ClassLoader cl, Class<?> target) {
             Class<?> type = null;
-            
+
             try {
                 // 尝试用指定的类加载器来加载目标类/接口
                 type = Class.forName(target.getName(), false, cl);
             } catch(ClassNotFoundException e) {
             }
-            
+
             if(type != target) {
                 throw new IllegalArgumentException(target.getName() + " referenced from a method is not visible from class loader");
             }
         }
-        
+
         /**
          * Define a dynamic module for the generated proxy classes in a non-exported package named com.sun.proxy.$MODULE.
          *
@@ -1329,50 +1329,50 @@ public class Proxy implements Serializable {
                 // create a dynamic module and setup module access
                 String mn = "jdk.proxy" + counter.incrementAndGet();    // 动态代理所在模块，如"jdk.proxy1"
                 String pn = PROXY_PACKAGE_PREFIX + "." + mn;            // 动态代理所在包，如com.sun.proxy.jdk.proxy1
-        
+
                 // 构造模块描述符
                 ModuleDescriptor descriptor = ModuleDescriptor.newModule(mn, Set.of(SYNTHETIC)).packages(Set.of(pn)).build();
-        
+
                 // 构造一个命名模块，会通知虚拟机
                 Module module = Modules.defineModule(cl, descriptor, null);
-        
+
                 // 使代理类所在模块依赖(requires)Proxy类所在模块，因为将来生成的代理类会继承Proxy类
                 Modules.addReads(module, Proxy.class.getModule());
-        
+
                 /* java.base to create proxy instance */
                 // 将代理类所在模块的pn包导出(exports)给"java.base"模块
                 Modules.addExports(module, pn, Object.class.getModule());
-        
+
                 // 返回动态创建的命名模块
                 return module;
             });
         }
-        
-        
+
+
         // 判断指定的类是否为public，且该类所在的包被完全导出(exports)
         private static boolean isExportedType(Class<?> c) {
             String pn = c.getPackageName();
             return Modifier.isPublic(c.getModifiers()) && c.getModule().isExported(pn);
         }
-        
+
         // 判断给定的类是否为非public
         private static boolean isPackagePrivateType(Class<?> c) {
             return !Modifier.isPublic(c.getModifiers());
         }
-        
+
         static void trace(String cn, Module module, ClassLoader loader, List<Class<?>> interfaces) {
             if(isDebug()) {
                 System.err.format("PROXY: %s/%s defined by %s%n", module.getName(), cn, loader);
             }
-            
+
             if(isDebug("debug")) {
                 interfaces.forEach(c -> System.out.println(toDetails(c)));
             }
         }
-        
+
         private static String toDetails(Class<?> c) {
             String access = "unknown";
-    
+
             if(isExportedType(c)) {
                 access = "exported";
             } else if(isPackagePrivateType(c)) {
@@ -1380,19 +1380,19 @@ public class Proxy implements Serializable {
             } else {
                 access = "module-private";
             }
-    
+
             ClassLoader ld = c.getClassLoader();
-    
+
             return String.format("   %s/%s %s loader %s", c.getModule().getName(), c.getName(), access, ld);
         }
-        
+
         private static boolean isDebug() {
             return !DEBUG.isEmpty();
         }
-        
+
         private static boolean isDebug(String flag) {
             return DEBUG.equals(flag);
         }
     }
-    
+
 }

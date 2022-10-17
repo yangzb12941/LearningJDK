@@ -46,6 +46,11 @@ import sun.jvm.hotspot.runtime.aarch64.*;
     interpreter or CodeCache) then we try to find an associated FP.
     We repeat this until we either find a complete frame or run out of
     stack to look at. </P> */
+// 应该能够在我们支持的所有aarch64平台（Linux/aarch64）上使用，以实现JavaThread的“currentFrameGuess（）”功能。
+// 输入是AARCH64ThreadContext；AARCH64帧的输出为SP、FP和PC。AARCH64Frame的实例化留给调用者，
+// 因为我们可能需要将AARCH64 Frame子类化，以支持Unix平台上的信号处理程序帧。 算法是在给定的范围内
+// （比如最多512K）向上搜索堆栈，为Java框架寻找一个合理的PC和SP，同时考虑到来自上下文的那些。如果我们找到一台属于虚拟机的PC
+// （即在生成的代码中，如解释器或CodeCache），那么我们会尝试找到一个相关的FP。我们重复此操作，直到找到一个完整的帧或超出堆栈。
 
 public class AARCH64CurrentFrameGuess {
   private AARCH64ThreadContext context;

@@ -37,9 +37,10 @@ import jdk.internal.misc.VM;
  * @see java.io.DeleteOnExitHook
  * @since 1.3
  */
-// 虚拟机关闭控制器，可在此注册一些需要在虚拟机关闭时执行的钩子
+    // 虚拟机关闭控制器，可在此注册一些需要在虚拟机关闭时执行的钩子
+    // 注意：类的访问权限是 protect 用户是直接操作不了。
 class Shutdown {
-    
+
     /**
      * The system shutdown hooks are registered with a predefined slot.
      * The list of shutdown hooks is as follows:
@@ -51,23 +52,25 @@ class Shutdown {
      * 钩子数量(编号)上限
      *
      * 系统中已经占用的钩子编号：
-     * (0) Console
-     * (1) ApplicationShutdownHooks
-     * (2) DeleteOnExit
+     * (0) Console 恢复
+     * (1) ApplicationShutdownHooks 它调用所有注册的应用程序关闭钩子，并等待它们完成
+     * (2) DeleteOnExit 文件删除钩子：注册一批在虚拟机关闭时会删掉的文件
      */
     private static final int MAX_SYSTEM_HOOKS = 10;
-    
+
     // 钩子列表
     private static final Runnable[] hooks = new Runnable[MAX_SYSTEM_HOOKS];
-    
+
     private static Object lock = new Lock();
-    
+
     /** Lock object for the native halt method */
+    // 本机暂停方法的锁定对象
     private static Object haltLock = new Lock();
-    
+
     /** the index of the currently running shutdown hook to the hooks array */
+    //当前运行的关闭钩子在钩子数组中的索引
     private static int currentRunningHook = -1;
-    
+
     /**
      * Add a new system shutdown hook.
      * Checks the shutdown state and the hook itself, but does not do any security checks.
@@ -91,19 +94,20 @@ class Shutdown {
         if(slot<0 || slot >= MAX_SYSTEM_HOOKS) {
             throw new IllegalArgumentException("Invalid slot: " + slot);
         }
-    
+
         synchronized(lock) {
             // 此处已经存在回调
             if(hooks[slot] != null) {
                 throw new InternalError("Shutdown hook at slot " + slot + " already registered");
             }
-        
+
             // 如果关闭过程中(调用runHooks()的过程中)禁止注册钩子
             if(!registerShutdownInProgress) {
+                // currentRunningHook 大于 -1 就表明 shutdown 中的钩子已经在执行了
                 if(currentRunningHook >= 0) {
                     throw new IllegalStateException("Shutdown in progress");
                 }
-            
+
                 // 即使在关闭过程中(还未关闭)也可以注册钩子
             } else {
                 /*
@@ -115,11 +119,11 @@ class Shutdown {
                     throw new IllegalStateException("Shutdown in progress");
                 }
             }
-        
+
             hooks[slot] = hook;
         }
     }
-    
+
     /**
      * Invoked by the JNI DestroyJavaVM procedure when the last non-daemon thread has finished.
      * Unlike the exit method, this method does not actually halt the VM.
@@ -130,7 +134,7 @@ class Shutdown {
             runHooks();
         }
     }
-    
+
     /**
      * Invoked by Runtime.exit, which does all the security checks.
      * Also invoked by handlers for system-provided termination events,
@@ -145,7 +149,7 @@ class Shutdown {
                 halt(status);   // 立即关闭虚拟机
             }
         }
-        
+
         synchronized(Shutdown.class) {
             /*
              * Synchronize on the class object, causing any other thread
@@ -156,7 +160,7 @@ class Shutdown {
             halt(status);   // 关闭虚拟机
         }
     }
-    
+
     /**
      * Run all system shutdown hooks.
      *
@@ -166,6 +170,10 @@ class Shutdown {
      * ApplicationShutdownHooks is registered as one single hook that starts all application shutdown hooks and waits until they finish.
      */
     // 执行所有注册在系统关闭时的钩子
+    //*运行所有系统关闭挂钩。
+    //*系统关闭挂钩在shutdown.class上同步的线程中运行。
+    //*其他调用Runtime::exit、Runtime::halt或JNI DestroyJavaVM的线程将无限期阻塞。
+    //*ApplicationShutdownHooks注册为一个钩子，它启动所有应用程序关闭钩子并等待它们完成。
     private static void runHooks() {
         synchronized(lock) {
             /*
@@ -177,18 +185,18 @@ class Shutdown {
                 return;
             }
         }
-        
+
         // 遍历所有注册的钩子
         for(int i = 0; i<MAX_SYSTEM_HOOKS; i++) {
             try {
                 Runnable hook;
-                
+
                 synchronized(lock) {
                     // acquire the lock to make sure the hook registered during shutdown is visible here.
                     currentRunningHook = i;
                     hook = hooks[i];
                 }
-                
+
                 if(hook != null) {
                     hook.run(); // 执行钩子方法
                 }
@@ -199,31 +207,33 @@ class Shutdown {
                 }
             }
         }
-        
+
         // set shutdown state
         VM.shutdown();  // 标记虚拟机进入关闭状态
     }
-    
+
     /* Notify the VM that it's time to halt. */
     // 通知虚拟机程序该终止了
     static native void beforeHalt();
-    
+
     /**
      * The halt method is synchronized on the halt lock to avoid corruption of the delete-on-shutdown file list.
      * It invokes the true native halt method.
      */
+    // halt方法在halt锁上同步，以避免关闭时删除文件列表的损坏。它调用真正的本地暂停方法。
     // 关闭虚拟机
     static void halt(int status) {
         synchronized(haltLock) {
             halt0(status);
         }
     }
-    
+
     // 关闭虚拟机的内部实现，status为关闭时的状态码，一般用非0的状态码表示异常退出状态
     static native void halt0(int status);
-    
+
     /* The preceding static fields are protected by this lock */
+    //锁对象，一个普通的类当作锁。前面的静态字段受此锁保护
     private static class Lock {
     }
-    
+
 }

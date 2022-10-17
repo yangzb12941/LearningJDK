@@ -37,44 +37,44 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 // "无害"线程，系统内部使用，用完之后会清理ThreadLocal信息
 public final class InnocuousThread extends Thread {
-    
+
     private static final long THREAD_LOCALS;                    // 获取Thread中threadLocals字段的地址
     private static final long INHERITABLE_THREAD_LOCALS;        // 获取Thread中inheritableThreadLocals字段的地址
     private static final long INHERITEDACCESSCONTROLCONTEXT;    // 获取Thread中inheritedAccessControlContext字段的地址
     private static final long CONTEXTCLASSLOADER;               // 获取Thread中contextClassLoader字段的地址
-    
+
     private static final jdk.internal.misc.Unsafe UNSAFE;
-    
+
     private static final AccessControlContext ACC;
     private static final ThreadGroup INNOCUOUSTHREADGROUP;
-    
+
     // 原子计数器
     private static final AtomicInteger threadNumber = new AtomicInteger(1);
-    
+
     // ensure run method is run only once
     private volatile boolean hasRun;    // 确保run方法只运行一次
-    
+
     // Use Unsafe to access Thread group and ThreadGroup parent fields
     static {
         try {
             ACC = new AccessControlContext(new ProtectionDomain[]{new ProtectionDomain(null, null)});
-            
+
             UNSAFE = jdk.internal.misc.Unsafe.getUnsafe();
-            
+
             Class<?> tk = Thread.class;
             Class<?> gk = ThreadGroup.class;
-            
+
             THREAD_LOCALS = UNSAFE.objectFieldOffset(tk, "threadLocals");
             INHERITABLE_THREAD_LOCALS = UNSAFE.objectFieldOffset(tk, "inheritableThreadLocals");
             INHERITEDACCESSCONTROLCONTEXT = UNSAFE.objectFieldOffset(tk, "inheritedAccessControlContext");
             CONTEXTCLASSLOADER = UNSAFE.objectFieldOffset(tk, "contextClassLoader");
-            
+
             long tg = UNSAFE.objectFieldOffset(tk, "group");
             long gp = UNSAFE.objectFieldOffset(gk, "parent");
-            
+
             // 存储根线程组
             ThreadGroup group = (ThreadGroup) UNSAFE.getObject(Thread.currentThread(), tg);
-    
+
             // Find and use topmost ThreadGroup as parent of new group
             while(group != null) {
                 ThreadGroup parent = (ThreadGroup) UNSAFE.getObject(group, gp);
@@ -82,7 +82,7 @@ public final class InnocuousThread extends Thread {
                     break;
                 group = parent;
             }
-            
+
             final ThreadGroup root = group;
             INNOCUOUSTHREADGROUP = AccessController.doPrivileged(new PrivilegedAction<ThreadGroup>() {
                 @Override
@@ -94,13 +94,13 @@ public final class InnocuousThread extends Thread {
             throw new Error(e);
         }
     }
-    
+
     private InnocuousThread(ThreadGroup group, Runnable target, String name, ClassLoader tccl) {
         super(group, target, name, 0L, false);
         UNSAFE.putObjectRelease(this, INHERITEDACCESSCONTROLCONTEXT, ACC);
         UNSAFE.putObjectRelease(this, CONTEXTCLASSLOADER, tccl);
     }
-    
+
     /*
      * Returns a new InnocuousThread with an auto-generated thread name and its context class loader is set to the system class loader.
      *
@@ -109,11 +109,18 @@ public final class InnocuousThread extends Thread {
     public static Thread newThread(Runnable target) {
         return newThread(newName(), target);
     }
-    
+
     /*
      * Returns a new InnocuousThread with its context class loader set to the system class loader.
      *
      * 返回一个新的"无害"线程(InnocuousThread)，其类加载器被设置为AppClassLoader。
+     * 启动类加载器：Bootstrap ClassLoader:由JVM实现，加载<JAVA_HOME>\lib目录下指定名称的jar包。不能被java程序直接引用
+     * 扩展类加载器：Extension ClassLoader：由sun.misc.Launcher$ExtClassLoader实现，
+     *                                   加载<JAVA_HOME>\lib\ext目录下指定名称jar包。
+     *                                   可被java程序直接引用
+     * 应用程序加载器：Application ClassLoader：由sun.misc.Launcher$AppClassLoader实现，
+     *                                   加载用户类路径上指定的类库。
+     *                                   可被java程序直接引用
      */
     public static Thread newThread(String name, Runnable target) {
         return AccessController.doPrivileged(new PrivilegedAction<Thread>() {
@@ -123,7 +130,7 @@ public final class InnocuousThread extends Thread {
             }
         });
     }
-    
+
     /**
      * Returns a new InnocuousThread with an auto-generated thread name. Its context class loader is set to null.
      *
@@ -132,7 +139,7 @@ public final class InnocuousThread extends Thread {
     public static Thread newSystemThread(Runnable target) {
         return newSystemThread(newName(), target);
     }
-    
+
     /*
      * Returns a new InnocuousThread with null context class loader.
      *
@@ -146,12 +153,12 @@ public final class InnocuousThread extends Thread {
             }
         });
     }
-    
+
     // 自动生成线程名称
     private static String newName() {
         return "InnocuousThread-" + threadNumber.getAndIncrement();
     }
-    
+
     /*
      * Drops all thread locals (and inherited thread locals).
      *
@@ -162,12 +169,12 @@ public final class InnocuousThread extends Thread {
         UNSAFE.putObject(this, THREAD_LOCALS, null);
         UNSAFE.putObject(this, INHERITABLE_THREAD_LOCALS, null);
     }
-    
+
     @Override
     public void setUncaughtExceptionHandler(UncaughtExceptionHandler x) {
         // silently fail
     }
-    
+
     @Override
     public void setContextClassLoader(ClassLoader cl) {
         // Allow clearing of the TCCL to remove the reference to the system classloader.
@@ -176,7 +183,7 @@ public final class InnocuousThread extends Thread {
         else
             throw new SecurityException("setContextClassLoader");
     }
-    
+
     // 执行线程的动作（只执行一次）
     @Override
     public void run() {

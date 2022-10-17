@@ -158,11 +158,11 @@ import sun.security.util.SecurityConstants;
 public final class Class<T> implements Serializable, GenericDeclaration, Type, AnnotatedElement {
     /** use serialVersionUID from JDK 1.1 for interoperability */
     private static final long serialVersionUID = 3206093459760846163L;
-    
+
     private static final int ANNOTATION = 0x00002000;
     private static final int ENUM = 0x00004000;
     private static final int SYNTHETIC = 0x00001000;
-    
+
     /**
      * Class Class is special cased within the Serialization Stream Protocol.
      *
@@ -180,72 +180,72 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      * @see java.io.ObjectStreamClass
      */
     private static final ObjectStreamField[] serialPersistentFields = new ObjectStreamField[0];
-    
+
     private static final Class<?>[] EMPTY_CLASS_ARRAY = new Class<?>[0];
-    
+
     /**
      * Initialized in JVM not by private constructor
      * This field is filtered from reflection access, i.e. getDeclaredField will throw NoSuchFieldException
      */
     // 当前类关联的类加载器
     private final ClassLoader classLoader;
-    
+
     // 数组的组件类型，int[]对应int，int[][]对应int[]，不是数组则为null
     private final Class<?> componentType;
-    
-    
+
+
     /** protection domain returned when the internal domain is null */
     private static ProtectionDomain allPermDomain;
-    
+
     private static ReflectionFactory reflectionFactory;
-    
+
     private transient volatile Constructor<T> cachedConstructor;
-    
+
     private transient volatile Class<?> newInstanceCallerCache;
-    
+
     private transient volatile SoftReference<ReflectionData<T>> reflectionData;
-    
+
     // Incremented by the VM on each call to JVM TI RedefineClasses() that redefines this class or a superclass.
     private transient volatile int classRedefinedCount;
-    
+
     // Generic info repository; lazily initialized
     private transient volatile ClassRepository genericInfo;
-    
+
     private transient volatile T[] enumConstants;
-    
+
     private transient volatile Map<String, T> enumConstantDirectory;
-    
+
     // Annotations cache
     @SuppressWarnings("UnusedDeclaration")
     private transient volatile AnnotationData annotationData;
-    
+
     @SuppressWarnings("UnusedDeclaration")
     private transient volatile AnnotationType annotationType;
-    
+
     // cache the name to reduce the number of calls into the VM
     private transient String name;
-    
+
     // set by VM
     private transient Module module;
-    
+
     // cached package name
     private transient String packageName;
-    
+
     /**
      * Backing store of user-defined values pertaining to this class.
      * Maintained by the ClassValue class.
      */
     transient ClassValue.ClassValueMap classValueMap;
-    
-    
+
+
     static {
         registerNatives();
     }
-    
-    
-    
+
+
+
     /*▼ 构造器 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Private constructor. Only the Java Virtual Machine creates Class objects.
      * This constructor is not used and prevents the default constructor being generated.
@@ -256,13 +256,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         classLoader = loader;
         componentType = arrayComponentType;
     }
-    
+
     /*▲ 构造器 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 加载类 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the {@code Class} object associated with the class or
      * interface with the given string name.  Invoking this method is
@@ -302,7 +302,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         Class<?> caller = Reflection.getCallerClass();
         return forName0(className, true, ClassLoader.getClassLoader(caller), caller);
     }
-    
+
     /**
      * Returns the {@code Class} object associated with the class or
      * interface with the given string name, using the given class loader.
@@ -366,7 +366,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public static Class<?> forName(String className, boolean initialize, ClassLoader loader) throws ClassNotFoundException {
         Class<?> caller = null;
-        
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             /*
@@ -381,10 +381,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 }
             }
         }
-        
+
         return forName0(className, initialize, loader, caller);
     }
-    
+
     /**
      * Returns the {@code Class} with the given <a href="ClassLoader.html#name">
      * binary name</a> in the given module.
@@ -430,10 +430,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public static Class<?> forName(Module module, String name) {
         Objects.requireNonNull(module);
         Objects.requireNonNull(name);
-    
+
         // 加载模块module的类加载器
         ClassLoader cl;
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             Class<?> caller = Reflection.getCallerClass();
@@ -446,7 +446,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         } else {
             cl = module.getClassLoader();
         }
-    
+
         // 处理BootClassLoader情形
         if(cl == null) {
             // 通过bootstrap类加载器查找类是否已加载，如果找不到则返回null
@@ -456,13 +456,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             return cl.loadClass(module, name);
         }
     }
-    
+
     /*▲ 加载类 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 创建对象 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Creates a new instance of the class represented by this {@code Class} object.
      * The class is instantiated as if by a {@code new} expression with an empty argument list.
@@ -512,20 +512,20 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), false);
         }
-        
+
         /* NOTE: the following code may not be strictly correct under the current Java memory model. */
-        
+
         // Constructor lookup
         if(cachedConstructor == null) {
             if(this == Class.class) {
                 throw new IllegalAccessException("Can not call newInstance() on the Class for java.lang.Class");
             }
-            
+
             try {
                 Class<?>[] empty = {};
-    
+
                 final Constructor<T> c = getReflectionFactory().copyConstructor(getConstructor0(empty, Member.DECLARED));
-    
+
                 /*
                  * Disable accessibility checks on the constructor since we have to do the security check here anyway
                  * (the stack depth is wrong for the Constructor's security check to work)
@@ -541,9 +541,9 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 throw (InstantiationException) new InstantiationException(getName()).initCause(e);
             }
         }
-        
+
         Constructor<T> tmpConstructor = cachedConstructor;
-        
+
         // Security check (same as in java.lang.reflect.Constructor)
         Class<?> caller = Reflection.getCallerClass();
         if(newInstanceCallerCache != caller) {
@@ -551,7 +551,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             Reflection.ensureMemberAccess(caller, this, this, modifiers);
             newInstanceCallerCache = caller;
         }
-        
+
         // Run constructor
         try {
             return tmpConstructor.newInstance((Object[]) null);
@@ -561,15 +561,15 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             return null;
         }
     }
-    
+
     /*▲ 创建对象 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 获取类名 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /* 参见ClassTest文件夹中com.kang.clazz.test02下的测试类 */
-    
+
     /**
      * Returns the  name of the entity (class, interface, array class,
      * primitive type, or void) represented by this {@code Class} object,
@@ -644,7 +644,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return name;
     }
-    
+
     /**
      * Returns the canonical name of the underlying class as
      * defined by the Java Language Specification.  Returns null if
@@ -676,7 +676,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return canonicalName == ReflectionData.NULL_SENTINEL ? null : canonicalName;
     }
-    
+
     /**
      * Returns the simple name of the underlying class as given in the
      * source code. Returns an empty string if the underlying class is
@@ -709,7 +709,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return simpleName;
     }
-    
+
     /**
      * Return an informative string for the name of this type.
      *
@@ -747,13 +747,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return getName();
     }
-    
+
     /*▲ 获取类名 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ isXXX ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Determines if the specified {@code Object} is assignment-compatible
      * with the object represented by this {@code Class}.  This method is
@@ -792,7 +792,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      */
     @HotSpotIntrinsicCandidate
     public native boolean isInstance(Object obj);
-    
+
     /**
      * Determines if the class or interface represented by this
      * {@code Class} object is either the same as, or is a superclass or
@@ -825,7 +825,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      */
     @HotSpotIntrinsicCandidate
     public native boolean isAssignableFrom(Class<?> cls);
-    
+
     /**
      * Determines if the specified {@code Class} object represents an
      * interface type.
@@ -836,7 +836,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     // X.class.isInterface() ==> 判断X是否为接口
     @HotSpotIntrinsicCandidate
     public native boolean isInterface();
-    
+
     /**
      * Returns true if this {@code Class} object represents an annotation
      * type.  Note that if this method returns true, {@link #isInterface()}
@@ -851,7 +851,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public boolean isAnnotation() {
         return (getModifiers() & ANNOTATION) != 0;
     }
-    
+
     /**
      * Determines if the specified {@code Class} object represents a
      * primitive type.
@@ -883,11 +883,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     // X.class.isPrimitive() ==> 判断X是否为基本类型，如int.class
     @HotSpotIntrinsicCandidate
     public native boolean isPrimitive();
-    
+
     /**
      * Determines if this {@code Class} object represents an array class.
+     * 确定此{@code Class}对象是否表示数组类。
      *
      * @return {@code true} if this object represents an array class;
+     * 如果此对象表示数组类；
      * {@code false} otherwise.
      *
      * @since 1.1
@@ -895,7 +897,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     // X.class.isArray() ==> 判断X是否为数组
     @HotSpotIntrinsicCandidate
     public native boolean isArray();
-    
+
     /**
      * Returns true if and only if this class was declared as an enum in the
      * source code.
@@ -911,7 +913,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         // classes for specialized enum constants don't do the former.
         return (this.getModifiers() & ENUM) != 0 && this.getSuperclass() == java.lang.Enum.class;
     }
-    
+
     /**
      * Returns {@code true} if and only if the underlying class is an anonymous class.
      *
@@ -923,7 +925,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public boolean isAnonymousClass() {
         return !isArray() && isLocalOrAnonymousClass() && getSimpleBinaryName0() == null;
     }
-    
+
     /**
      * Returns {@code true} if and only if the underlying class
      * is a local class.
@@ -936,7 +938,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public boolean isLocalClass() {
         return isLocalOrAnonymousClass() && (isArray() || getSimpleBinaryName0() != null);
     }
-    
+
     /**
      * Returns {@code true} if and only if the underlying class
      * is a member class.
@@ -949,7 +951,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public boolean isMemberClass() {
         return !isLocalOrAnonymousClass() && getDeclaringClass0() != null;
     }
-    
+
     /**
      * Returns {@code true} if this class is a synthetic class;
      * returns {@code false} otherwise.
@@ -964,7 +966,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public boolean isSynthetic() {
         return (getModifiers() & SYNTHETIC) != 0;
     }
-    
+
     /**
      * {@inheritDoc}
      *
@@ -976,13 +978,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public boolean isAnnotationPresent(Class<? extends Annotation> annotationClass) {
         return GenericDeclaration.super.isAnnotationPresent(annotationClass);
     }
-    
+
     /*▲ isXXX ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ Class ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the {@code Class} representing the component type of an
      * array.  If this class does not represent an array class this method
@@ -1003,7 +1005,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             return null;
         }
     }
-    
+
     /**
      * Returns the {@code Class} representing the direct superclass of the
      * entity (class, interface, primitive type or void) represented by
@@ -1018,7 +1020,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     // 获取当前类的父类（只识别非泛型类型）
     @HotSpotIntrinsicCandidate
     public native Class<? super T> getSuperclass();
-    
+
     /**
      * Returns the interfaces directly implemented by the class or interface
      * represented by this object.
@@ -1068,7 +1070,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         // defensively copy before handing over to user code
         return getInterfaces(true);
     }
-    
+
     /**
      * Returns the immediately enclosing class of the underlying
      * class.  If the underlying class is a top level class this
@@ -1092,14 +1094,14 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         // c) Inner classes (non-static member classes)
         // d) Local classes (named classes declared within a method)
         // e) Anonymous classes
-    
+
         /*
          * JVM Spec 4.7.7:
          * A class must have an EnclosingMethod attribute if and only if it is a local class or an anonymous class.
          */
         EnclosingMethodInfo enclosingInfo = getEnclosingMethodInfo();
         Class<?> enclosingCandidate;
-    
+
         if(enclosingInfo == null) {
             // This is a top level or a nested class or an inner class (a, b, or c)
             enclosingCandidate = getDeclaringClass0();
@@ -1112,17 +1114,17 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 enclosingCandidate = enclosingClass;
             }
         }
-        
+
         if(enclosingCandidate != null) {
             SecurityManager sm = System.getSecurityManager();
             if(sm != null) {
                 enclosingCandidate.checkPackageAccess(sm, ClassLoader.getClassLoader(Reflection.getCallerClass()), true);
             }
         }
-    
+
         return enclosingCandidate;
     }
-    
+
     /**
      * If the class or interface represented by this {@code Class} object
      * is a member of another class, returns the {@code Class} object
@@ -1147,15 +1149,15 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(candidate == null) {
             return candidate;
         }
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             candidate.checkPackageAccess(sm, ClassLoader.getClassLoader(Reflection.getCallerClass()), true);
         }
-    
+
         return candidate;
     }
-    
+
     /**
      * Returns an array of {@code Class} objects reflecting all the
      * classes and interfaces declared as members of the class represented by
@@ -1197,10 +1199,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), false);
         }
-    
+
         return getDeclaredClasses0();
     }
-    
+
     /**
      * Returns an array containing {@code Class} objects representing all
      * the public classes and interfaces that are members of the class
@@ -1230,13 +1232,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), false);
         }
-        
+
         // Privileged so this implementation can look at DECLARED classes,
         // something the caller might not have privilege to do.  The code here
         // is allowed to look at DECLARED classes because (1) it does not hand
         // out anything other than public members and (2) public member access
         // has already been ok'd by the SecurityManager.
-        
+
         return AccessController.doPrivileged(new PrivilegedAction<>() {
             public Class<?>[] run() {
                 List<Class<?>> list = new ArrayList<>();
@@ -1253,7 +1255,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             }
         });
     }
-    
+
     /**
      * Returns the nest host of the <a href=#nest>nest</a> to which the class
      * or interface represented by this {@code Class} object belongs.
@@ -1298,7 +1300,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(isPrimitive() || isArray()) {
             return this;
         }
-    
+
         Class<?> host;
         try {
             host = getNestHost0();
@@ -1306,21 +1308,21 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             // if we couldn't load our nest-host then we act as-if we have no nest-host attribute
             return this;
         }
-    
+
         // if null then nest membership validation failed, so we act as-if we have no nest-host attribute
         if(host == null || host == this) {
             return this;
         }
-    
+
         // returning a different class requires a security check
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             checkPackageAccess(sm, ClassLoader.getClassLoader(Reflection.getCallerClass()), true);
         }
-    
+
         return host;
     }
-    
+
     /**
      * Returns an array containing {@code Class} objects representing all the
      * classes and interfaces that are members of the nest to which the class
@@ -1362,11 +1364,11 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(isPrimitive() || isArray()) {
             return new Class<?>[]{this};
         }
-    
+
         Class<?>[] members = getNestMembers0();
-        
+
         // Can't actually enable this due to bootstrapping issues assert(members.length != 1 || members[0] == this); expected invariant from VM
-        
+
         if(members.length>1) {
             // If we return anything other than the current class we need a security check
             SecurityManager sm = System.getSecurityManager();
@@ -1374,16 +1376,16 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 checkPackageAccess(sm, ClassLoader.getClassLoader(Reflection.getCallerClass()), true);
             }
         }
-    
+
         return members;
     }
-    
+
     /*▲ Class ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 泛型 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the {@code Type} representing the direct superclass of
      * the entity (class, interface, primitive type or void) represented by
@@ -1420,16 +1422,16 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(info == null) {
             return getSuperclass();
         }
-        
+
         // Historical irregularity:
         // Generic signature marks interfaces with superclass = Object but this API returns null for interfaces
         if(isInterface()) {
             return null;
         }
-        
+
         return info.getSuperclass();
     }
-    
+
     /**
      * Returns the {@code Type}s representing the interfaces
      * directly implemented by the class or interface represented by
@@ -1482,7 +1484,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         ClassRepository info = getGenericInfo();
         return (info == null) ? getInterfaces() : info.getSuperInterfaces();
     }
-    
+
     /**
      * Returns an array of {@code TypeVariable} objects that represent the
      * type variables declared by the generic declaration represented by this
@@ -1509,15 +1511,15 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             return (TypeVariable<Class<T>>[]) new TypeVariable<?>[0];
         }
     }
-    
+
     /*▲ 泛型 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ Constructor ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /* 构造器不属于成员，不能被子类继承 */
-    
+
     /**
      * Returns an array containing {@code Constructor} objects reflecting
      * all the public constructors of the class represented by this
@@ -1553,10 +1555,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), true);
         }
-    
+
         return copyConstructors(privateGetDeclaredConstructors(true));
     }
-    
+
     /**
      * Returns a {@code Constructor} object that reflects the specified
      * public constructor of the class represented by this {@code Class}
@@ -1593,10 +1595,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), true);
         }
-    
+
         return getReflectionFactory().copyConstructor(getConstructor0(parameterTypes, Member.PUBLIC));
     }
-    
+
     /**
      * Returns an array of {@code Constructor} objects reflecting all the
      * constructors declared by the class represented by this
@@ -1641,10 +1643,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
         }
-    
+
         return copyConstructors(privateGetDeclaredConstructors(false));
     }
-    
+
     /**
      * Returns a {@code Constructor} object that reflects the specified
      * constructor of the class or interface represented by this
@@ -1690,10 +1692,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
         }
-        
+
         return getReflectionFactory().copyConstructor(getConstructor0(parameterTypes, Member.DECLARED));
     }
-    
+
     /**
      * If this {@code Class} object represents a local or anonymous
      * class within a constructor, returns a {@link
@@ -1732,32 +1734,32 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public Constructor<?> getEnclosingConstructor() throws SecurityException {
         EnclosingMethodInfo enclosingInfo = getEnclosingMethodInfo();
-    
+
         if(enclosingInfo == null) {
             return null;
         } else {
             if(!enclosingInfo.isConstructor()) {
                 return null;
             }
-        
+
             ConstructorRepository typeInfo = ConstructorRepository.make(enclosingInfo.getDescriptor(), getFactory());
             Type[] parameterTypes = typeInfo.getParameterTypes();
             Class<?>[] parameterClasses = new Class<?>[parameterTypes.length];
-        
+
             // Convert Types to Classes; returned types *should*
             // be class objects since the methodDescriptor's used
             // don't have generics information
             for(int i = 0; i<parameterClasses.length; i++) {
                 parameterClasses[i] = toClass(parameterTypes[i]);
             }
-            
+
             // Perform access check
             final Class<?> enclosingCandidate = enclosingInfo.getEnclosingClass();
             SecurityManager sm = System.getSecurityManager();
             if(sm != null) {
                 enclosingCandidate.checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
             }
-            
+
             Constructor<?>[] candidates = enclosingCandidate.privateGetDeclaredConstructors(false);
             /*
              * Loop over all declared constructors; match number
@@ -1769,17 +1771,17 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                     return fact.copyConstructor(c);
                 }
             }
-            
+
             throw new InternalError("Enclosing constructor not found");
         }
     }
-    
+
     /*▲ Constructor ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ Method ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns an array containing {@code Method} objects reflecting all the
      * public methods of the class or interface represented by this {@code
@@ -1869,10 +1871,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), true);
         }
-    
+
         return copyMethods(privateGetPublicMethods());
     }
-    
+
     /**
      * Returns a {@code Method} object that reflects the specified public
      * member method of the class or interface represented by this
@@ -1973,20 +1975,20 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public Method getMethod(String name, Class<?>... parameterTypes) throws NoSuchMethodException, SecurityException {
         Objects.requireNonNull(name);
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), true);
         }
-    
+
         Method method = getMethod0(name, parameterTypes);
         if(method == null) {
             throw new NoSuchMethodException(methodToString(name, parameterTypes));
         }
-    
+
         return getReflectionFactory().copyMethod(method);
     }
-    
+
     /**
      * Returns an array containing {@code Method} objects reflecting all the
      * declared methods of the class or interface represented by this {@code
@@ -2044,10 +2046,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
         }
-    
+
         return copyMethods(privateGetDeclaredMethods(false));
     }
-    
+
     /**
      * Returns a {@code Method} object that reflects the specified
      * declared method of the class or interface represented by this
@@ -2100,20 +2102,20 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public Method getDeclaredMethod(String name, Class<?>... parameterTypes) throws NoSuchMethodException, SecurityException {
         Objects.requireNonNull(name);
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
         }
-    
+
         Method method = searchMethods(privateGetDeclaredMethods(false), name, parameterTypes);
         if(method == null) {
             throw new NoSuchMethodException(methodToString(name, parameterTypes));
         }
-    
+
         return getReflectionFactory().copyMethod(method);
     }
-    
+
     /**
      * If this {@code Class} object represents a local or anonymous
      * class within a method, returns a {@link
@@ -2153,25 +2155,25 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public Method getEnclosingMethod() throws SecurityException {
         EnclosingMethodInfo enclosingInfo = getEnclosingMethodInfo();
-    
+
         if(enclosingInfo == null) {
             return null;
         } else {
             if(!enclosingInfo.isMethod()) {
                 return null;
             }
-        
+
             MethodRepository typeInfo = MethodRepository.make(enclosingInfo.getDescriptor(), getFactory());
             Class<?> returnType = toClass(typeInfo.getReturnType());
             Type[] parameterTypes = typeInfo.getParameterTypes();
             Class<?>[] parameterClasses = new Class<?>[parameterTypes.length];
-        
+
             // Convert Types to Classes; returned types *should*
             // be class objects since the methodDescriptor's used
             // don't have generics information
             for(int i = 0; i<parameterClasses.length; i++)
                 parameterClasses[i] = toClass(parameterTypes[i]);
-            
+
             // Perform access check
             final Class<?> enclosingCandidate = enclosingInfo.getEnclosingClass();
             SecurityManager sm = System.getSecurityManager();
@@ -2179,7 +2181,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 enclosingCandidate.checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
             }
             Method[] candidates = enclosingCandidate.privateGetDeclaredMethods(false);
-            
+
             /*
              * Loop over all declared methods; match method name,
              * number of and type of parameters, *and* return
@@ -2195,17 +2197,17 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                     }
                 }
             }
-            
+
             throw new InternalError("Enclosing method not found");
         }
     }
-    
+
     /*▲ Method ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ Field ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns an array containing {@code Field} objects reflecting all
      * the accessible public fields of the class or interface represented by
@@ -2249,10 +2251,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), true);
         }
-    
+
         return copyFields(privateGetPublicFields());
     }
-    
+
     /**
      * Returns a {@code Field} object that reflects the specified public member
      * field of the class or interface represented by this {@code Class}
@@ -2299,20 +2301,20 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public Field getField(String name) throws NoSuchFieldException, SecurityException {
         Objects.requireNonNull(name);
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             checkMemberAccess(sm, Member.PUBLIC, Reflection.getCallerClass(), true);
         }
-    
+
         Field field = getField0(name);
         if(field == null) {
             throw new NoSuchFieldException(name);
         }
-    
+
         return getReflectionFactory().copyField(field);
     }
-    
+
     /**
      * Returns an array of {@code Field} objects reflecting all the fields
      * declared by the class or interface represented by this
@@ -2361,10 +2363,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
         }
-    
+
         return copyFields(privateGetDeclaredFields(false));
     }
-    
+
     /**
      * Returns a {@code Field} object that reflects the specified declared
      * field of the class or interface represented by this {@code Class}
@@ -2409,26 +2411,26 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @CallerSensitive
     public Field getDeclaredField(String name) throws NoSuchFieldException, SecurityException {
         Objects.requireNonNull(name);
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             checkMemberAccess(sm, Member.DECLARED, Reflection.getCallerClass(), true);
         }
-    
+
         Field field = searchFields(privateGetDeclaredFields(false), name);
         if(field == null) {
             throw new NoSuchFieldException(name);
         }
-    
+
         return getReflectionFactory().copyField(field);
     }
-    
+
     /*▲ Field ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ Annotation ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * @since 1.5
      */
@@ -2436,7 +2438,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public Annotation[] getAnnotations() {
         return AnnotationParser.toArray(annotationData().annotations);
     }
-    
+
     /**
      * @throws NullPointerException {@inheritDoc}
      * @since 1.5
@@ -2445,10 +2447,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @SuppressWarnings("unchecked")
     public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
         Objects.requireNonNull(annotationClass);
-        
+
         return (A) annotationData().annotations.get(annotationClass);
     }
-    
+
     /**
      * @throws NullPointerException {@inheritDoc}
      * @since 1.8
@@ -2464,11 +2466,11 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @Override
     public <A extends Annotation> A[] getAnnotationsByType(Class<A> annotationClass) {
         Objects.requireNonNull(annotationClass);
-        
+
         AnnotationData annotationData = annotationData();
         return AnnotationSupport.getAssociatedAnnotations(annotationData.declaredAnnotations, this, annotationClass);
     }
-    
+
     /**
      * @since 1.5
      */
@@ -2476,7 +2478,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public Annotation[] getDeclaredAnnotations() {
         return AnnotationParser.toArray(annotationData().declaredAnnotations);
     }
-    
+
     /**
      * @throws NullPointerException {@inheritDoc}
      * @since 1.8
@@ -2486,10 +2488,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @SuppressWarnings("unchecked")
     public <A extends Annotation> A getDeclaredAnnotation(Class<A> annotationClass) {
         Objects.requireNonNull(annotationClass);
-        
+
         return (A) annotationData().declaredAnnotations.get(annotationClass);
     }
-    
+
     /**
      * @throws NullPointerException {@inheritDoc}
      * @since 1.8
@@ -2505,10 +2507,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     @Override
     public <A extends Annotation> A[] getDeclaredAnnotationsByType(Class<A> annotationClass) {
         Objects.requireNonNull(annotationClass);
-        
+
         return AnnotationSupport.getDirectlyAndIndirectlyPresent(annotationData().declaredAnnotations, annotationClass);
     }
-    
+
     /**
      * Returns an {@code AnnotatedType} object that represents the use of a
      * type to specify the superclass of the entity represented by this {@code
@@ -2553,10 +2555,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(this == Object.class || isInterface() || isArray() || isPrimitive() || this == Void.TYPE) {
             return null;
         }
-        
+
         return TypeAnnotationParser.buildAnnotatedSuperclass(getRawTypeAnnotations(), getConstantPool(), this);
     }
-    
+
     /**
      * Returns an array of {@code AnnotatedType} objects that represent the use
      * of types to specify superinterfaces of the entity represented by this
@@ -2614,13 +2616,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public AnnotatedType[] getAnnotatedInterfaces() {
         return TypeAnnotationParser.buildAnnotatedInterfaces(getRawTypeAnnotations(), getConstantPool(), this);
     }
-    
+
     /*▲ Annotation ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 类加载器 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the class loader for the class.  Some implementations may use
      * null to represent the bootstrap class loader. This method will return
@@ -2652,26 +2654,26 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(cl == null) {
             return null;
         }
-    
+
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
             ClassLoader.checkClassLoaderPermission(cl, Reflection.getCallerClass());
         }
-    
+
         return cl;
     }
-    
+
     // 返回当前类的类加载器
     ClassLoader getClassLoader0() {
         return classLoader;
     }
-    
+
     /*▲ 类加载器 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 加载资源 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Finds a resource with a given name.
      *
@@ -2739,26 +2741,26 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      */
     @CallerSensitive
     public URL getResource(String resName) {
-    
+
         // 如果resName以'/'开头，则去掉开头的"/"后返回；否则，将当前类所在包名转换为路径，并将该路径添加到resName前面后返回
         resName = resolveName(resName);
-    
+
         // 获取当前类所在的module
         Module thisModule = getModule();
-    
+
         // 如果thisModule是命名模块
         if(thisModule.isNamed()) {
             // check if resource can be located by caller
             if(Resources.canEncapsulate(resName) && !isOpenToCaller(resName, Reflection.getCallerClass())) {
                 return null;
             }
-    
+
             // resource not encapsulated or in package open to caller
             String moduleName = thisModule.getName();
-    
+
             // 获取当前类的类加载器
             ClassLoader loader = getClassLoader0();
-    
+
             // 在模块moduleName下查找名称为resName的资源
             try {
                 if(loader == null) {
@@ -2772,10 +2774,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return null;
             }
         }
-    
+
         // 如果当前类是未命名模块，则尝试用类加载器直接加载资源
         ClassLoader loader = getClassLoader0();
-    
+
         if(loader == null) {
             // 自顶向下加载资源，截止到system类加载器。返回【首个】匹配到的资源的URL
             return ClassLoader.getSystemResource(resName);
@@ -2784,7 +2786,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             return loader.getResource(resName);
         }
     }
-    
+
     /**
      * Finds a resource with a given name.
      *
@@ -2852,28 +2854,28 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      */
     @CallerSensitive
     public InputStream getResourceAsStream(String resName) {
-    
+
         // 如果resName以'/'开头，则去掉开头的"/"后返回；否则，将当前类所在包名转换为路径，并将该路径添加到resName前面后返回
         resName = resolveName(resName);
-    
+
         // 获取当前类所在的module
         Module thisModule = getModule();
-    
+
         // 如果thisModule是命名模块
         if(thisModule.isNamed()) {
             // check if resource can be located by caller
             if(Resources.canEncapsulate(resName) && !isOpenToCaller(resName, Reflection.getCallerClass())) {
                 return null;
             }
-    
+
             // resource not encapsulated or in package open to caller
             String mn = thisModule.getName();
-    
+
             // 获取当前类的类加载器
             ClassLoader loader = getClassLoader0();
-    
+
             try {
-        
+
                 // special-case built-in class loaders to avoid the need for a URL connection
                 if(loader == null) {
                     // 在指定的模块路径(根目录)或bootstrap类加载器关联的类路径(根目录)下查找匹配的资源
@@ -2884,19 +2886,19 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 } else {
                     // 在指定的模块路径或类加载器loader的类路径下查找匹配的资源
                     URL url = loader.findResource(mn, resName);
-            
+
                     // 打开指定url处的流
                     return (url != null) ? url.openStream() : null;
                 }
-        
+
             } catch(IOException | SecurityException e) {
                 return null;
             }
         }
-    
+
         // 如果当前类是未命名模块，则尝试用类加载器直接加载资源
         ClassLoader loader = getClassLoader0();
-    
+
         if(loader == null) {
             // 自顶向下加载资源，截止到system类加载器。返回【首个】匹配到的资源的输入流
             return ClassLoader.getSystemResourceAsStream(resName);
@@ -2905,13 +2907,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             return loader.getResourceAsStream(resName);
         }
     }
-    
+
     /*▲ 加载资源 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 其他 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Returns the elements of this enum class or null if this
      * Class object does not represent an enum type.
@@ -2928,7 +2930,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         T[] values = getEnumConstantsShared();
         return (values != null) ? values.clone() : null;
     }
-    
+
     /**
      * Gets the package of this class.
      *
@@ -2945,14 +2947,14 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(isPrimitive() || isArray()) {
             return null;
         }
-    
+
         ClassLoader cl = getClassLoader0();
-        
+
         return cl != null
             ? cl.definePackage(this)
             : BootLoader.definePackage(this);
     }
-    
+
     /**
      * Returns the fully qualified package name.
      *
@@ -2986,12 +2988,12 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(pn != null) {
             return pn;
         }
-    
+
         Class<?> c = this;
         while(c.isArray()) {
             c = c.getComponentType();
         }
-    
+
         if(c.isPrimitive()) {
             pn = "java.lang";
         } else {
@@ -2999,12 +3001,12 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             int dot = cn.lastIndexOf('.');
             pn = (dot != -1) ? cn.substring(0, dot).intern() : "";
         }
-    
+
         this.packageName = pn;
-    
+
         return pn;
     }
-    
+
     /**
      * Returns the module that this class or interface is a member of.
      *
@@ -3026,7 +3028,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public Module getModule() {
         return module;
     }
-    
+
     /**
      * Returns the Java language modifiers for this class or interface, encoded
      * in an integer. The modifiers consist of the Java Virtual Machine's
@@ -3058,7 +3060,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     // 获取类的修饰符信息，参见java.lang.reflect.Modifier
     @HotSpotIntrinsicCandidate
     public native int getModifiers();
-    
+
     /**
      * Gets the signers of this class.
      *
@@ -3069,7 +3071,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      */
     // 获取签名信息
     public native Object[] getSigners();
-    
+
     /**
      * Returns the {@code ProtectionDomain} of this class.  If there is a
      * security manager installed, this method first calls the security
@@ -3093,23 +3095,23 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(sm != null) {
             sm.checkPermission(SecurityConstants.GET_PD_PERMISSION);
         }
-    
+
         ProtectionDomain pd = getProtectionDomain0();
         if(pd != null) {
             return pd;
         }
-    
+
         if(allPermDomain == null) {
             java.security.Permissions perms = new java.security.Permissions();
             perms.add(SecurityConstants.ALL_PERMISSION);
             allPermDomain = new java.security.ProtectionDomain(null, perms);
         }
-    
+
         pd = allPermDomain;
-    
+
         return pd;
     }
-    
+
     /**
      * Returns the assertion status that would be assigned to this
      * class if it were to be initialized at the time this method is invoked.
@@ -3141,7 +3143,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(loader == null) {
             return desiredAssertionStatus0(this);
         }
-        
+
         // If the classloader has been initialized with the assertion
         // directives, ask it. Otherwise, ask the VM.
         synchronized(loader.assertionLock) {
@@ -3149,16 +3151,16 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return loader.desiredAssertionStatus(getName());
             }
         }
-    
+
         return desiredAssertionStatus0(this);
     }
-    
+
     /*▲ 其他 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 转换 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Casts an object to the class or interface represented by this {@code Class} object.
      *
@@ -3179,7 +3181,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return (T) obj;
     }
-    
+
     /**
      * Casts this {@code Class} object to represent a subclass of the class
      * represented by the specified class object.  Checks that the cast
@@ -3211,16 +3213,16 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(!clazz.isAssignableFrom(this)) {
             throw new ClassCastException(this.toString());
         }
-    
+
         return (Class<? extends U>) this;
     }
-    
+
     /*▲ 转换 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
-    
+
+
+
     /*▼ 字符串化 ████████████████████████████████████████████████████████████████████████████████┓ */
-    
+
     /**
      * Converts the object to a string. The string representation is the
      * string "class" or "interface", followed by a space, and then by the
@@ -3236,7 +3238,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     public String toString() {
         return (isInterface() ? "interface " : (isPrimitive() ? "" : "class ")) + getName();
     }
-    
+
     /**
      * Returns a string describing this {@code Class}, including
      * information about modifiers and type parameters.
@@ -3274,11 +3276,11 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(isPrimitive()) {
             return toString();
         }
-    
+
         StringBuilder sb = new StringBuilder();
         Class<?> component = this;
         int arrayDepth = 0;
-    
+
         if(isArray()) {
             do {
                 arrayDepth++;
@@ -3292,11 +3294,11 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 sb.append(Modifier.toString(modifiers));
                 sb.append(' ');
             }
-        
+
             if(isAnnotation()) {
                 sb.append('@');
             }
-        
+
             if(isInterface()) { // Note: all annotation types are interfaces
                 sb.append("interface");
             } else {
@@ -3308,7 +3310,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             sb.append(' ');
             sb.append(getName());
         }
-    
+
         TypeVariable<?>[] typeparms = component.getTypeParameters();
         if(typeparms.length>0) {
             StringJoiner sj = new StringJoiner(",", "<", ">");
@@ -3317,66 +3319,66 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             }
             sb.append(sj.toString());
         }
-    
+
         for(int i = 0; i<arrayDepth; i++) {
             sb.append("[]");
         }
-    
+
         return sb.toString();
     }
-    
+
     /*▲ 字符串化 ████████████████████████████████████████████████████████████████████████████████┛ */
-    
-    
+
+
     /** Called after security check for system loader access checks have been made. */
     private static native Class<?> forName0(String className, boolean initialize, ClassLoader loader, Class<?> caller) throws ClassNotFoundException;
-    
+
     /**
      * Return the Virtual Machine's Class object for the named
      * primitive type.
      */
     static native Class<?> getPrimitiveClass(String name);
-    
+
     static byte[] getExecutableTypeAnnotationBytes(Executable ex) {
         return getReflectionFactory().getExecutableTypeAnnotationBytes(ex);
     }
-    
+
     /**
      * Returns the elements of this enum class or null if this Class object does not represent an enum type;
      * identical to getEnumConstants except that the result is uncloned, cached, and shared by all callers.
      */
     T[] getEnumConstantsShared() {
         T[] constants = enumConstants;
-        
+
         if(constants == null) {
             if(!isEnum()) {
                 return null;
             }
-            
+
             try {
                 final Method values = getMethod("values");
-                
+
                 AccessController.doPrivileged(new PrivilegedAction<>() {
                     public Void run() {
                         values.setAccessible(true);
                         return null;
                     }
                 });
-                
+
                 @SuppressWarnings("unchecked")
                 T[] temporaryConstants = (T[]) values.invoke(null);
-                
+
                 enumConstants = constants = temporaryConstants;
-                
+
                 // These can happen when users concoct enum-like classes that don't comply with the enum spec.
             } catch(InvocationTargetException | NoSuchMethodException | IllegalAccessException ex) {
                 return null;
             }
         }
-        
+
         return constants;
     }
-    
+
     /**
      * Returns the list of {@code Method} objects for the declared public
      * methods of this class or interface that have the specified method name
@@ -3399,21 +3401,21 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return result;
     }
-    
+
     /**
      * Set the signers of this class.
      */
     // 为当前类设置签名信息
     native void setSigners(Object[] signers);
-    
+
     // Annotations handling
     native byte[] getRawAnnotations();
-    
+
     // Since 1.8
     native byte[] getRawTypeAnnotations();
-    
+
     native ConstantPool getConstantPool();
-    
+
     /**
      * Returns a map from simple name to enum constant.  This package-private
      * method is used internally by Enum to implement
@@ -3426,46 +3428,46 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(directory != null) {
             return directory;
         }
-    
+
         T[] universe = getEnumConstantsShared();
-    
+
         if(universe == null) {
             throw new IllegalArgumentException(getName() + " is not an enum type");
         }
-    
+
         directory = new HashMap<>((int) (universe.length / 0.75f) + 1);
-    
+
         for(T constant : universe) {
             directory.put(((Enum<?>) constant).name(), constant);
         }
-    
+
         enumConstantDirectory = directory;
-    
+
         return directory;
     }
-    
+
     boolean casAnnotationType(AnnotationType oldType, AnnotationType newType) {
         return Atomic.casAnnotationType(this, oldType, newType);
     }
-    
+
     AnnotationType getAnnotationType() {
         return annotationType;
     }
-    
+
     Map<Class<? extends Annotation>, Annotation> getDeclaredAnnotationMap() {
         return annotationData().declaredAnnotations;
     }
-    
+
     private static Class<?> toClass(Type o) {
         if(o instanceof GenericArrayType)
             return Array.newInstance(toClass(((GenericArrayType) o).getGenericComponentType()), 0).getClass();
         return (Class<?>) o;
     }
-    
+
     private static void addAll(Collection<Field> c, Field[] o) {
         Collections.addAll(c, o);
     }
-    
+
     // This method does not copy the returned Field object!
     private static Field searchFields(Field[] fields, String name) {
         for(Field field : fields) {
@@ -3473,10 +3475,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return field;
             }
         }
-    
+
         return null;
     }
-    
+
     // This method does not copy the returned Method object!
     private static Method searchMethods(Method[] methods, String name, Class<?>[] parameterTypes) {
         ReflectionFactory fact = getReflectionFactory();
@@ -3488,29 +3490,29 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return res;
     }
-    
+
     private static boolean arrayContentsEq(Object[] a1, Object[] a2) {
         if(a1 == null) {
             return a2 == null || a2.length == 0;
         }
-        
+
         if(a2 == null) {
             return a1.length == 0;
         }
-        
+
         if(a1.length != a2.length) {
             return false;
         }
-        
+
         for(int i = 0; i<a1.length; i++) {
             if(a1[i] != a2[i]) {
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     private static Field[] copyFields(Field[] arg) {
         Field[] out = new Field[arg.length];
         ReflectionFactory fact = getReflectionFactory();
@@ -3519,7 +3521,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return out;
     }
-    
+
     private static Method[] copyMethods(Method[] arg) {
         Method[] out = new Method[arg.length];
         ReflectionFactory fact = getReflectionFactory();
@@ -3528,7 +3530,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return out;
     }
-    
+
     private static <U> Constructor<U>[] copyConstructors(Constructor<U>[] arg) {
         Constructor<U>[] out = arg.clone();
         ReflectionFactory fact = getReflectionFactory();
@@ -3537,10 +3539,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return out;
     }
-    
+
     // Retrieves the desired assertion status of this class from the VM
     private static native boolean desiredAssertionStatus0(Class<?> clazz);
-    
+
     // Fetches the factory for reflective objects
     private static ReflectionFactory getReflectionFactory() {
         if(reflectionFactory == null) {
@@ -3548,58 +3550,58 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return reflectionFactory;
     }
-    
+
     private static native void registerNatives();
-    
+
     private native String getName0();
-    
+
     private Class<?>[] getInterfaces(boolean cloneArray) {
         ReflectionData<T> rd = reflectionData();
         if(rd == null) {
             // no cloning required
             return getInterfaces0();
         }
-    
+
         Class<?>[] interfaces = rd.interfaces;
         if(interfaces == null) {
             interfaces = getInterfaces0();
             rd.interfaces = interfaces;
         }
-    
+
         // defensively copy if requested
         return cloneArray ? interfaces.clone() : interfaces;
     }
-    
+
     private native Class<?>[] getInterfaces0();
-    
+
     private native Object[] getEnclosingMethod0();
-    
+
     private EnclosingMethodInfo getEnclosingMethodInfo() {
         Object[] enclosingInfo = getEnclosingMethod0();
         if(enclosingInfo == null) {
             return null;
         }
-    
+
         return new EnclosingMethodInfo(enclosingInfo);
     }
-    
+
     private native Class<?> getDeclaringClass0();
-    
+
     private String getSimpleName0() {
         if(isArray()) {
             return getComponentType().getSimpleName() + "[]";
         }
-    
+
         String simpleName = getSimpleBinaryName();
-    
+
         if(simpleName == null) { // top level class
             simpleName = getName();
             simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1); // strip the package name
         }
-    
+
         return simpleName;
     }
-    
+
     private String getCanonicalName0() {
         if(isArray()) {
             String canonicalName = getComponentType().getCanonicalName();
@@ -3609,11 +3611,11 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return ReflectionData.NULL_SENTINEL;
             }
         }
-    
+
         if(isLocalOrAnonymousClass()) {
             return ReflectionData.NULL_SENTINEL;
         }
-    
+
         Class<?> enclosingClass = getEnclosingClass();
         if(enclosingClass == null) { // top level class
             return getName();
@@ -3622,10 +3624,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(enclosingName == null) {
             return ReflectionData.NULL_SENTINEL;
         }
-    
+
         return enclosingName + "." + getSimpleName();
     }
-    
+
     /**
      * Returns the "simple binary name" of the underlying class, i.e.,
      * the binary name without the leading enclosing class name.
@@ -3636,17 +3638,17 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(isTopLevelClass()) {
             return null;
         }
-    
+
         String name = getSimpleBinaryName0();
         if(name == null) {
             return "";  // anonymous class
         }
-    
+
         return name;
     }
-    
+
     private native String getSimpleBinaryName0();
-    
+
     /**
      * Returns {@code true} if this is a top level class.  Returns {@code false}
      * otherwise.
@@ -3654,7 +3656,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
     private boolean isTopLevelClass() {
         return !isLocalOrAnonymousClass() && getDeclaringClass0() == null;
     }
-    
+
     /**
      * Returns {@code true} if this is a local class or an anonymous
      * class.  Returns {@code false} otherwise.
@@ -3663,7 +3665,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         // JVM Spec 4.7.7: A class must have an EnclosingMethod attribute if and only if it is a local class or an anonymous class.
         return hasEnclosingMethodInfo();
     }
-    
+
     /**
      * Returns true if a resource with the given name can be located by the given caller.
      * All resources in a module can be located by code in the module.
@@ -3674,31 +3676,31 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         // assert getModule().isNamed();
         Module thisModule = getModule();
         Module callerModule = (caller != null) ? caller.getModule() : null;
-    
+
         // 同一个模块
         if(callerModule == thisModule) {
             return true;
         }
-    
+
         // 获取指定名称的资源所在的包
         String pn = Resources.toPackageName(name);
         if(!thisModule.getDescriptor().packages().contains(pn)) {
             return true;
         }
-    
+
         if(callerModule == null && !thisModule.isOpen(pn)) {
             // no caller, package not open
             return false;
         }
-    
+
         if(!thisModule.isOpen(pn, callerModule)) {
             // package not open to caller
             return false;
         }
-    
+
         return true;
     }
-    
+
     private boolean hasEnclosingMethodInfo() {
         Object[] enclosingInfo = getEnclosingMethod0();
         if(enclosingInfo != null) {
@@ -3707,12 +3709,12 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return false;
     }
-    
+
     /**
      * Returns the ProtectionDomain of this class.
      */
     private native ProtectionDomain getProtectionDomain0();
-    
+
     /**
      * Check if client is allowed to access members.  If access is denied,
      * throw a SecurityException.
@@ -3737,10 +3739,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 sm.checkPermission(SecurityConstants.CHECK_MEMBER_ACCESS_PERMISSION);
             }
         }
-    
+
         this.checkPackageAccess(sm, ccl, checkProxyInterfaces);
     }
-    
+
     /**
      * Checks if a client loaded in ClassLoader ccl is allowed to access this
      * class under the current package access policy. If access is denied,
@@ -3750,7 +3752,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
      */
     private void checkPackageAccess(SecurityManager sm, final ClassLoader ccl, boolean checkProxyInterfaces) {
         final ClassLoader cl = getClassLoader0();
-        
+
         if(ReflectUtil.needsPackageAccessCheck(ccl, cl)) {
             String pkg = this.getPackageName();
             if(pkg != null && !pkg.isEmpty()) {
@@ -3760,13 +3762,13 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 }
             }
         }
-    
+
         // check package access on the proxy interfaces
         if(checkProxyInterfaces && Proxy.isProxyClass(this)) {
             ReflectUtil.checkProxyPackageAccess(ccl, this.getInterfaces());
         }
     }
-    
+
     /**
      * Add a package name prefix if the resName is not absolute Remove leading "/" if name is absolute
      */
@@ -3781,7 +3783,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 // 获取数组的组件类型
                 c = c.getComponentType();
             }
-            
+
             // 获取当前类的包名
             String baseName = c.getPackageName();
             if(baseName != null && !baseName.isEmpty()) {
@@ -3789,10 +3791,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 resName = baseName.replace('.', '/') + "/" + resName;
             }
         }
-        
+
         return resName;
     }
-    
+
     /** Lazily create and cache ReflectionData */
     private ReflectionData<T> reflectionData() {
         SoftReference<ReflectionData<T>> reflectionData = this.reflectionData;
@@ -3801,12 +3803,12 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(reflectionData != null && (rd = reflectionData.get()) != null && rd.redefinedCount == classRedefinedCount) {
             return rd;
         }
-    
+
         // else no SoftReference or cleared SoftReference or stale ReflectionData
         // -> create and replace new instance
         return newReflectionData(reflectionData, classRedefinedCount);
     }
-    
+
     private ReflectionData<T> newReflectionData(SoftReference<ReflectionData<T>> oldReflectionData, int classRedefinedCount) {
         while(true) {
             ReflectionData<T> rd = new ReflectionData<>(classRedefinedCount);
@@ -3814,7 +3816,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             if(Atomic.casReflectionData(this, oldReflectionData, new SoftReference<>(rd))) {
                 return rd;
             }
-    
+
             // else retry
             oldReflectionData = this.reflectionData;
             classRedefinedCount = this.classRedefinedCount;
@@ -3823,20 +3825,20 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             }
         }
     }
-    
+
     /** Generic signature handling */
     private native String getGenericSignature0();
-    
+
     /** accessor for factory */
     private GenericsFactory getFactory() {
         // create scope and factory
         return CoreReflectionFactory.make(this, ClassScope.make(this));
     }
-    
+
     /** accessor for generic info repository; generic info is lazily initialized */
     private ClassRepository getGenericInfo() {
         ClassRepository genericInfo = this.genericInfo;
-    
+
         if(genericInfo == null) {
             String signature = getGenericSignature0();
             if(signature == null) {
@@ -3846,10 +3848,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             }
             this.genericInfo = genericInfo;
         }
-    
+
         return (genericInfo != ClassRepository.NONE) ? genericInfo : null;
     }
-    
+
     /**
      * Returns an array of "root" fields.
      * These Field objects must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyField.
@@ -3863,7 +3865,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return res;
             }
         }
-    
+
         // No cached value available; request value from VM
         res = Reflection.filterFields(this, getDeclaredFields0(publicOnly));
         if(rd != null) {
@@ -3873,10 +3875,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 rd.declaredFields = res;
             }
         }
-    
+
         return res;
     }
-    
+
     /**
      * Returns an array of "root" fields.
      * These Field objects must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyField.
@@ -3890,33 +3892,33 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return res;
             }
         }
-        
+
         // Use a linked hash set to ensure order is preserved and
         // fields from common super interfaces are not duplicated
         LinkedHashSet<Field> fields = new LinkedHashSet<>();
-        
+
         // Local fields
         addAll(fields, privateGetDeclaredFields(true));
-        
+
         // Direct superinterfaces, recursively
         for(Class<?> si : getInterfaces()) {
             addAll(fields, si.privateGetPublicFields());
         }
-        
+
         // Direct superclass, recursively
         Class<?> sc = getSuperclass();
         if(sc != null) {
             addAll(fields, sc.privateGetPublicFields());
         }
-        
+
         res = fields.toArray(new Field[0]);
         if(rd != null) {
             rd.publicFields = res;
         }
-    
+
         return res;
     }
-    
+
     /**
      * Returns an array of "root" constructors.
      * These Constructor objects must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyConstructor.
@@ -3930,7 +3932,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return res;
             }
         }
-    
+
         // No cached value available; request value from VM
         if(isInterface()) {
             @SuppressWarnings("unchecked")
@@ -3939,7 +3941,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         } else {
             res = getDeclaredConstructors0(publicOnly);
         }
-    
+
         if(rd != null) {
             if(publicOnly) {
                 rd.publicConstructors = res;
@@ -3947,10 +3949,10 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 rd.declaredConstructors = res;
             }
         }
-    
+
         return res;
     }
-    
+
     /**
      * Returns an array of "root" methods.
      * These Method objects must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyMethod.
@@ -3964,7 +3966,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return res;
             }
         }
-    
+
         // No cached value available; request value from VM
         res = Reflection.filterMethods(this, getDeclaredMethods0(publicOnly));
         if(rd != null) {
@@ -3976,7 +3978,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return res;
     }
-    
+
     /**
      * Returns an array of "root" methods.
      * These Method objects must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyMethod.
@@ -3990,14 +3992,14 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 return res;
             }
         }
-        
+
         // No cached value available; compute value recursively.
         // Start by fetching public declared methods...
         PublicMethods pms = new PublicMethods();
         for(Method m : privateGetDeclaredMethods(/* publicOnly */ true)) {
             pms.merge(m);
         }
-    
+
         // ...then recur over superclass methods...
         Class<?> sc = getSuperclass();
         if(sc != null) {
@@ -4005,7 +4007,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 pms.merge(m);
             }
         }
-    
+
         // ...and finally over direct superinterfaces.
         for(Class<?> intf : getInterfaces(/* cloneArray */ false)) {
             for(Method m : intf.privateGetPublicMethods()) {
@@ -4015,15 +4017,15 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 }
             }
         }
-        
+
         res = pms.toArray();
         if(rd != null) {
             rd.publicMethods = res;
         }
-    
+
         return res;
     }
-    
+
     /**
      * Returns a "root" Field object.
      * This Field object must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyField.
@@ -4059,7 +4061,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return null;
     }
-    
+
     /**
      * Returns a "root" Method object.
      * This Method object must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyMethod.
@@ -4069,7 +4071,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             /* includeStatic */ true);
         return res == null ? null : res.getMostSpecific();
     }
-    
+
     /**
      * Returns a list of "root" Method objects.
      * These Method objects must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyMethod.
@@ -4084,24 +4086,24 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         if(res != null) {
             return res;
         }
-        
+
         // if there was no match among declared methods,
         // we must consult the superclass (if any) recursively...
         Class<?> sc = getSuperclass();
         if(sc != null) {
             res = sc.getMethodsRecursive(name, parameterTypes, includeStatic);
         }
-        
+
         // ...and coalesce the superclass methods with methods obtained
         // from directly implemented interfaces excluding static methods...
         for(Class<?> intf : getInterfaces(/* cloneArray */ false)) {
             res = PublicMethods.MethodList.merge(res, intf.getMethodsRecursive(name, parameterTypes,
                 /* includeStatic */ false));
         }
-        
+
         return res;
     }
-    
+
     /**
      * Returns a "root" Constructor object.
      * This Constructor object must NOT be propagated to the outside world, but must instead be copied via ReflectionFactory.copyConstructor.
@@ -4116,15 +4118,15 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         throw new NoSuchMethodException(methodToString("<init>", parameterTypes));
     }
-    
+
     private native Field[] getDeclaredFields0(boolean publicOnly);
-    
+
     private native Method[] getDeclaredMethods0(boolean publicOnly);
-    
+
     private native Constructor<T>[] getDeclaredConstructors0(boolean publicOnly);
-    
+
     private native Class<?>[] getDeclaredClasses0();
-    
+
     /** Helper method to get the method name from arguments. */
     private String methodToString(String name, Class<?>[] argTypes) {
         StringJoiner sj = new StringJoiner(", ", getName() + "." + name + "(", ")");
@@ -4136,11 +4138,11 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         }
         return sj.toString();
     }
-    
+
     private String cannotCastMsg(Object obj) {
         return "Cannot cast " + obj.getClass().getName() + " to " + getName();
     }
-    
+
     private AnnotationData annotationData() {
         while(true) { // retry loop
             AnnotationData annotationData = this.annotationData;
@@ -4157,7 +4159,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             }
         }
     }
-    
+
     private AnnotationData createAnnotationData(int classRedefinedCount) {
         Map<Class<? extends Annotation>, Annotation> declaredAnnotations = AnnotationParser.parseAnnotations(getRawAnnotations(), getConstantPool(), this);
         Class<?> superClass = getSuperclass();
@@ -4174,7 +4176,7 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 }
             }
         }
-    
+
         if(annotations == null) {
             // no inherited annotations -> share the Map with declaredAnnotations
             annotations = declaredAnnotations;
@@ -4182,29 +4184,29 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
             // at least one inherited annotation -> declared may override inherited
             annotations.putAll(declaredAnnotations);
         }
-    
+
         return new AnnotationData(annotations, declaredAnnotations, classRedefinedCount);
     }
-    
+
     private native Class<?> getNestHost0();
-    
+
     private native Class<?>[] getNestMembers0();
-    
+
     /** annotation data that might get invalidated when JVM TI RedefineClasses() is called */
     private static class AnnotationData {
         final Map<Class<? extends Annotation>, Annotation> annotations;
         final Map<Class<? extends Annotation>, Annotation> declaredAnnotations;
-        
+
         // Value of classRedefinedCount when we created this AnnotationData instance
         final int redefinedCount;
-        
+
         AnnotationData(Map<Class<? extends Annotation>, Annotation> annotations, Map<Class<? extends Annotation>, Annotation> declaredAnnotations, int redefinedCount) {
             this.annotations = annotations;
             this.declaredAnnotations = declaredAnnotations;
             this.redefinedCount = redefinedCount;
         }
     }
-    
+
     /** Atomic operations support. */
     private static class Atomic {
         // initialize Unsafe machinery here, since we need to call Class.class instance method
@@ -4216,20 +4218,20 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         private static final long annotationTypeOffset = unsafe.objectFieldOffset(Class.class, "annotationType");
         // offset of Class.annotationData instance field
         private static final long annotationDataOffset = unsafe.objectFieldOffset(Class.class, "annotationData");
-        
+
         static <T> boolean casReflectionData(Class<?> clazz, SoftReference<ReflectionData<T>> oldData, SoftReference<ReflectionData<T>> newData) {
             return unsafe.compareAndSetObject(clazz, reflectionDataOffset, oldData, newData);
         }
-        
+
         static <T> boolean casAnnotationType(Class<?> clazz, AnnotationType oldType, AnnotationType newType) {
             return unsafe.compareAndSetObject(clazz, annotationTypeOffset, oldType, newType);
         }
-        
+
         static <T> boolean casAnnotationData(Class<?> clazz, AnnotationData oldData, AnnotationData newData) {
             return unsafe.compareAndSetObject(clazz, annotationDataOffset, oldData, newData);
         }
     }
-    
+
     /**
      * Reflection data caches various derived names and reflective members.
      * Cached values may be invalidated when JVM TI RedefineClasses() is called
@@ -4251,38 +4253,38 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
         // Cached names
         String simpleName;
         String canonicalName;
-        
+
         ReflectionData(int redefinedCount) {
             this.redefinedCount = redefinedCount;
         }
     }
-    
+
     private static final class EnclosingMethodInfo {
         private final Class<?> enclosingClass;
         private final String name;
         private final String descriptor;
-        
+
         EnclosingMethodInfo(Object[] enclosingInfo) {
             validate(enclosingInfo);
             this.enclosingClass = (Class<?>) enclosingInfo[0];
             this.name = (String) enclosingInfo[1];
             this.descriptor = (String) enclosingInfo[2];
         }
-        
+
         static void validate(Object[] enclosingInfo) {
             if(enclosingInfo.length != 3)
                 throw new InternalError("Malformed enclosing method information");
             try {
                 // The array is expected to have three elements:
-                
+
                 // the immediately enclosing class
                 Class<?> enclosingClass = (Class<?>) enclosingInfo[0];
                 assert (enclosingClass != null);
-                
+
                 // the immediately enclosing method or constructor's
                 // name (can be null).
                 String name = (String) enclosingInfo[1];
-                
+
                 // the immediately enclosing method or constructor's
                 // descriptor (null iff name is).
                 String descriptor = (String) enclosingInfo[2];
@@ -4291,27 +4293,27 @@ public final class Class<T> implements Serializable, GenericDeclaration, Type, A
                 throw new InternalError("Invalid type in enclosing method information", cce);
             }
         }
-        
+
         boolean isPartial() {
             return enclosingClass == null || name == null || descriptor == null;
         }
-        
+
         boolean isConstructor() {
             return !isPartial() && "<init>".equals(name);
         }
-        
+
         boolean isMethod() {
             return !isPartial() && !isConstructor() && !"<clinit>".equals(name);
         }
-        
+
         Class<?> getEnclosingClass() {
             return enclosingClass;
         }
-        
+
         String getName() {
             return name;
         }
-        
+
         String getDescriptor() {
             return descriptor;
         }
