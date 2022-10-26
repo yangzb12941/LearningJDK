@@ -545,7 +545,7 @@ public class ScheduledThreadPoolExecutor extends ThreadPoolExecutor implements S
     private void delayedExecute(RunnableScheduledFuture<?> task) {
         // 如果线程池至少处于【关闭】状态（不接收新线程）
         if(isShutdown()) {
-            // 为指定的动作（任务）执行【拒绝策略】
+            // 为指定的动作（任务）执行【拒绝策略】，线程池的拒绝策略。
             reject(task);
             return;
         }

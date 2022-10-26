@@ -1275,6 +1275,12 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
                 try {
                     // 任务执行前的回调
+                    // 调用由子类实现的前置处理钩子。
+                    //在给定线程中执行给定Runnable之前调用的方法。 该方法由将执行任务r的线程t调用，
+                    //并且可用于重新初始化ThreadLocals或执行日志记录。
+                    //此实现不执行任何操作，但可以在子类中对其进行自定义。
+                    //注意：为了正确地嵌套多个重写，子类通常应在此方法的末尾调用super.beforeExecute。
+                    //参数：t将运行任务的线程；rr将要执行的任务
                     beforeExecute(currentThread, runnableTask);
 
                     try {
@@ -1329,6 +1335,14 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      *    both before and after the timed wait, and if the queue is
      *    non-empty, this worker is not the last thread in the pool.
      *
+     * 工作线程从任务队列中拿取任务的核心方法。
+     * 根据配置决定采用阻塞或时限超时获取。
+     * 在以下几种情况会返回null从而接下来线程会退出(runWorker方法循环结束):
+     * 1. 当前工作线程数超过了maximumPoolSize(由于maximumPoolSize可以动态调整，这是可能的)。
+     * 2. 线程池状态为STOP (因为STOP状态不处理任务队列中的任务了)。
+     * 3. 线程池状态为SHUTDOWN,任务队列为空 (因为SHUTDOWN状态仍然需要处理等待中任务)。
+     * 4. 根据线程池参数状态以及线程是否空闲超过keepAliveTime决定是否退出当前工作线程。
+     *
      * @return task, or null if the worker must exit, in which case
      *         workerCount is decremented
      */
@@ -1357,6 +1371,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                     decrementWorkerCount();
 
                     // 返回null意味着该【N】型Worker稍后将结束
+                    // 返回null，则在runWorker()方法内部会跳出循环，最终通过processWorkerExit()方法
+                    // 从线程池HashSet中移除工作线程对象(这一步通过可重入锁控制并发访问HashSet的安全性)。
                     return null;
                 }
             }
@@ -1376,6 +1392,15 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             boolean timed = allowCoreThreadTimeOut || workerCount>corePoolSize;
 
             // 如果线程池中的Worker数量超过【最大阈值】（线程争用严重时会有此种情形）
+            /*
+             * 1. 工作线程数>maximumPoolSize,当前工作线程需要退出。因为最大线程数是可以调整的，所以
+             *  当前线程数量超过最大线程数是可能出现的。
+             * 2. timed && timedOut == true说明当前线程受keepAliveTime影响且上次获取任务超时。
+             *    这种情况下只要当前线程不是最后一个工作线程或者任务队列为空，则可以退出。
+             *    换句话说就是，如果队列不为空，则当前线程不能是最后一个工作线程，
+             *    否则退出了就没线程处理任务了。
+             */
+
             if(workerCount>maximumPoolSize
                 // 或者启用了超时设置，且已经超时
                 || (timed && timedOut)) {
@@ -1401,7 +1426,6 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                         // 返回null意味着该【N】型Worker稍后将结束
                         return null;
                     }
-
                     continue;
                 }
             }
@@ -1450,7 +1474,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     // 线程池中的某个Worker结束，除了需要将该Worker从线程池移除，还要保证阻塞队列中的阻塞任务后续有人处理
     private void processWorkerExit(Worker worker, boolean completedAbruptly) {
         /* If abrupt, then workerCount wasn't adjusted */
-
+        // 因为正常退出，workerCount减1这件事情是在getTask拿不到任务的情况下做掉的。
+        // 所以在有异常的情况下，需要在本方法里给workCount减1。
         // 如果工作线程是非正常退出的
         if(completedAbruptly) {
             // 原子地递【减】线程池中工作线程(Worker)的数量，并更新线程池状态标记
@@ -1697,6 +1722,11 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * termination possible -- reducing worker count or removing tasks
      * from the queue during shutdown. The method is non-private to
      * allow access from ScheduledThreadPoolExecutor.
+     *
+     * 如果（SHUTDOWN和池及队列为空）或（STOP和池为空），则转换为TERMINATED状态。
+     * 如果符合终止条件，但workerCount不为零，则中断空闲工作进程以确保关闭信号传播。
+     * 必须在执行任何可能导致终止的操作后调用此方法，这些操作包括减少工作人员计数或在关闭期间从队列中删除任务。
+     * 该方法是非私有的，允许从ScheduledThreadPoolExecutor访问。
      */
     // 尝试让线程池进入{3}【终止】状态
     final void tryTerminate() {
@@ -2458,8 +2488,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * should generally invoke {@code super.beforeExecute} at the end of
      * this method.
      *
-     * @param t the thread that will run task {@code r}
-     * @param r the task that will be executed
+     * @param workerThread the thread that will run task {@code r}
+     * @param runnableTask the task that will be executed
      */
     // 任务执行前的回调，位于runWorker(Worker)中
     protected void beforeExecute(Thread workerThread, Runnable runnableTask) {
@@ -2510,8 +2540,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      *   }
      * }}</pre>
      *
-     * @param r the runnable that has completed
-     * @param t the exception that caused termination, or null if
+     * @param runnableTask the runnable that has completed
+     * @param ex the exception that caused termination, or null if
      *          execution completed normally
      */
     // 任务执行后的回调，该方法位于runWorker(Worker)中
@@ -2695,8 +2725,9 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      *   可以看到setCorePoolSize该方法会调用上面说到的 interruptIdleWorkers 方法，
      *   interruptIdleWorkers 方法会遍历所有的工作线程，尝试加锁成功后执行中断操作，
      *   如果执行 setCorePoolSize 方法的是线程池中某个工作线程，在锁可重入的情况下，
-     *   该工作线程会在之后的 w.tryLock 成功获取锁，并中断自己。为了避免这种情况，就需要有一个非可重入的互斥锁，
-     *   继承 AbstractQueuedSynchronizer 之后，可以简单快速的实现。
+     *   该工作线程会在之后的 w.tryLock 成功获取锁，并中断自己。
+     *   为了避免这种情况，就需要有一个非可重入的互斥锁，继承 AbstractQueuedSynchronizer 之后，
+     *   可以简单快速的实现。
      *
      * ⑤ 此外，为了抑制线程真正开始运行之前的中断，我们将锁的状态值初始化为负值，
      *   并在启动时将其清除（runWorker 方法中）。

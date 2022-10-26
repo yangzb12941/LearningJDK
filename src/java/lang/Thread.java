@@ -731,7 +731,11 @@ public class Thread implements Runnable {
      * or a user thread. The Java Virtual Machine exits when the only
      * threads running are all daemon threads.
      *
+     * 将此线程标记为{@linkplain isDaemon守护进程}线程或用户线程。
+     * 当唯一运行的线程都是守护程序线程时，Java虚拟机将退出。
+     *
      * <p> This method must be invoked before the thread is started.
+     * 必须在启动线程之前调用此方法。
      *
      * @param on if {@code true}, marks this thread as a daemon thread
      *
