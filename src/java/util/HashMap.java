@@ -2696,7 +2696,8 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
          * @param index the index of the table being split
          * @param bit   the bit of hash to split on
          */
-        // 拆分红黑树以适应新的容量要求，因为扩容会导致index哈希槽处的那些元素进行再哈希，并最多分成两拨（bit为2的冪，一般传入的值是哈希数组旧容量）
+        // 拆分红黑树以适应新的容量要求，因为扩容会导致index哈希槽处的那些元素进行再哈希，
+        // 并最多分成两拨（bit为2的冪，一般传入的值是哈希数组旧容量）
         final void split(HashMap<K, V> map, Node<K, V>[] tab, int index, int bit) {
             TreeNode<K, V> b = this;
 
@@ -2706,6 +2707,8 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
 
             int lc = 0, hc = 0;
 
+            //这里就是利用了 生成红黑树的时候，除了红黑树结构的 parent、left、right指针外，
+            //仍然保留双向链表指针，在拆解红黑树的过程中通过双向链表遍历节点。
             for(TreeNode<K, V> e = b, next; e != null; e = next) {
                 next = (TreeNode<K, V>) e.next;
 
@@ -2732,8 +2735,11 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
                     ++hc;
                 }
             }
-
+            //以上的循环，就是把红黑树拆为了【高位】和【低位】的两个双向链表。
+            //此时节点还是 TreeNode类型。
             if(loHead != null) {
+                //若是在扩容之后，【低位】链表数量低于6，则需要把红黑树TreeNode转化为普通的Node
+                //即:拆红黑树
                 if(lc<=UNTREEIFY_THRESHOLD) {
                     // 遍历红黑树loHead上所有元素，创建一个链表
                     tab[index] = loHead.untreeify(map);
@@ -2742,13 +2748,15 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
 
                     if(hiHead != null) {
                         // 遍历loHead链表上的所有元素，创建一棵红黑树
+                        // 形成新的红黑树
                         loHead.treeify(tab);
                     }
 
                     // (else is already treeified)
                 }
             }
-
+            //若是在扩容之后，【高位】链表数量低于6，则需要把红黑树TreeNode转化为普通的Node
+            //即:拆红黑树
             if(hiHead != null) {
                 if(hc<=UNTREEIFY_THRESHOLD) {
                     // 遍历红黑树hiHead上所有元素，创建一个链表
@@ -2757,7 +2765,8 @@ public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneabl
                     tab[index + bit] = hiHead;
 
                     if(loHead != null) {
-                        // 遍历hiHead链表上的所有元素，创建一棵红黑树
+                        // 遍历hiHead链表上的所有元素，创建一棵红黑树。
+                        // 形成新的红黑树
                         hiHead.treeify(tab);
                     }
                 }

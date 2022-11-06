@@ -19,13 +19,11 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="09bdf446-3684-4a24-aefa-1909e21a342e" name="Default Changelist" comment="2022-10-17:&#10;1、增加 Thread 中断标记的理解。">
+    <list default="true" id="09bdf446-3684-4a24-aefa-1909e21a342e" name="Default Changelist" comment="2022-10-26:&#10;1、AQS 和 ReentrantReadWriteLock 锁的阅读。">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/lang/Thread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/lang/Thread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/util/concurrent/ScheduledThreadPoolExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/util/concurrent/ScheduledThreadPoolExecutor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/util/concurrent/ThreadPoolExecutor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/util/concurrent/ThreadPoolExecutor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/util/concurrent/locks/AbstractQueuedSynchronizer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/util/concurrent/locks/AbstractQueuedSynchronizer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/util/concurrent/locks/ReentrantReadWriteLock.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/util/concurrent/locks/ReentrantReadWriteLock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/java/util/HashMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/util/HashMap.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/java/util/concurrent/Executors.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/util/concurrent/Executors.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/javax/xml/parsers/FactoryFinder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/javax/xml/parsers/FactoryFinder.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,6 +68,15 @@
       <workItem from="1666320389197" duration="1237000" />
       <workItem from="1666491179258" duration="612000" />
       <workItem from="1666574756936" duration="2368000" />
+      <workItem from="1666754226860" duration="2110000" />
+      <workItem from="1666876987759" duration="1426000" />
+      <workItem from="1666921415372" duration="598000" />
+      <workItem from="1667100406567" duration="1796000" />
+      <workItem from="1667176662823" duration="2813000" />
+      <workItem from="1667289576505" duration="829000" />
+      <workItem from="1667353236710" duration="1293000" />
+      <workItem from="1667439477164" duration="3658000" />
+      <workItem from="1667703600195" duration="2381000" />
     </task>
     <task id="LOCAL-00001" summary="2022-10-17:&#10;1、TimeTask 源码阅读">
       <created>1665988568536</created>
@@ -113,7 +120,14 @@
       <option name="project" value="LOCAL" />
       <updated>1666018275706</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="2022-10-26:&#10;1、AQS 和 ReentrantReadWriteLock 锁的阅读。">
+      <created>1666754318161</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1666754318161</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -136,22 +150,23 @@
     <MESSAGE value="2022-10-17：&#10;1、定时任务笔记上传" />
     <MESSAGE value="2022-10-17:&#10;1、ThreadPoolExcutor#Worker类为什么要继承自AbstractQueuedSynchronizer？" />
     <MESSAGE value="2022-10-17:&#10;1、增加 Thread 中断标记的理解。" />
-    <option name="LAST_COMMIT_MESSAGE" value="2022-10-17:&#10;1、增加 Thread 中断标记的理解。" />
+    <MESSAGE value="2022-10-26:&#10;1、AQS 和 ReentrantReadWriteLock 锁的阅读。" />
+    <option name="LAST_COMMIT_MESSAGE" value="2022-10-26:&#10;1、AQS 和 ReentrantReadWriteLock 锁的阅读。" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2252" y="122" key="IDE.errors.dialog" timestamp="1666149365161">
-      <screen x="1920" y="0" width="1920" height="1050" />
+    <state x="221" y="80" key="IDE.errors.dialog" timestamp="1667705099878">
+      <screen x="0" y="0" width="1280" height="689" />
     </state>
-    <state x="221" y="80" key="IDE.errors.dialog/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1666013101401" />
+    <state x="221" y="80" key="IDE.errors.dialog/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1667705099878" />
     <state x="2252" y="122" key="IDE.errors.dialog/0.0.1280.689/1920.0.1920.1050@1920.0.1920.1050" timestamp="1666149365161" />
     <state x="121" y="0" key="SettingsEditor" timestamp="1665644393873">
       <screen x="0" y="0" width="1280" height="689" />
     </state>
     <state x="121" y="0" key="SettingsEditor/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665644393873" />
-    <state x="233" y="78" key="Vcs.Push.Dialog.v2" timestamp="1666018282473">
+    <state x="233" y="78" key="Vcs.Push.Dialog.v2" timestamp="1666754417764">
       <screen x="0" y="0" width="1280" height="689" />
     </state>
-    <state x="233" y="78" key="Vcs.Push.Dialog.v2/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1666018282473" />
+    <state x="233" y="78" key="Vcs.Push.Dialog.v2/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1666754417764" />
     <state x="2429" y="117" width="905" height="817" key="find.popup" timestamp="1666153720300">
       <screen x="1920" y="0" width="1920" height="1050" />
     </state>
@@ -162,10 +177,10 @@
     </state>
     <state x="297" y="153" key="run.anything.popup/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1665796608280" />
     <state x="2366" y="233" key="run.anything.popup/0.0.1280.689/1920.0.1920.1050@1920.0.1920.1050" timestamp="1666159797230" />
-    <state x="2375" y="15" width="1008" height="1034" key="search.everywhere.popup" timestamp="1666320392944">
-      <screen x="1920" y="0" width="1920" height="1050" />
+    <state x="303" y="10" width="672" height="678" key="search.everywhere.popup" timestamp="1667704222958">
+      <screen x="0" y="0" width="1280" height="689" />
     </state>
-    <state x="303" y="10" width="672" height="678" key="search.everywhere.popup/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1666071527809" />
-    <state x="2375" y="15" width="1008" height="1034" key="search.everywhere.popup/0.0.1280.689/1920.0.1920.1050@1920.0.1920.1050" timestamp="1666320392944" />
+    <state x="303" y="10" width="672" height="678" key="search.everywhere.popup/0.0.1280.689/1920.0.1920.1050@0.0.1280.689" timestamp="1667704222958" />
+    <state x="2375" y="15" width="1008" height="1034" key="search.everywhere.popup/0.0.1280.689/1920.0.1920.1050@1920.0.1920.1050" timestamp="1667473697735" />
   </component>
 </project>

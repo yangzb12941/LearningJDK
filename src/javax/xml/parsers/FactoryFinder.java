@@ -203,6 +203,9 @@ class FactoryFinder {
     /**
      * Finds the implementation Class object in the specified order.  Main
      * entry point.
+     *
+     * 按指定顺序查找实现类对象。主要入口点。
+     *
      * @return Class object of factory, never null
      *
      * @param type                  Base class / Service interface  of the
@@ -211,6 +214,7 @@ class FactoryFinder {
      *                              is found.  Use null to mean no fallback.
      *
      * Package private so this code can be shared.
+     * 包私有，以便可以共享此代码。
      */
     static <T> T find(Class<T> type, String fallbackClassName)
         throws FactoryConfigurationError
